@@ -3,12 +3,17 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+#Eclipse files
+.project
+.pydevproject
+
 # C extensions
 *.so
 
 # Distribution / packaging
 .Python
 build/
+_skbuild
 develop-eggs/
 dist/
 downloads/

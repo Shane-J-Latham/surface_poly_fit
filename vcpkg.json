@@ -1,0 +1,8 @@
+{
+    "dependencies": [
+        "pybind11",
+        "tbb",
+        "eigen3",
+        "cgal"
+    ]
+}

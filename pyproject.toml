@@ -1,0 +1,29 @@
+[build-system]
+requires = [
+  "setuptools>=42",
+  "versioneer[toml]",
+  "scikit-build",
+  "cmake",
+  "ninja"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "surface_poly_fit"
+dependencies = [
+    "numpy>=1.14.5",
+    "scipy",
+    "vtk",
+    "rtree",
+    "trimesh"
+]
+dynamic = ["version"]
+
+[tool.versioneer]
+VCS = "git"
+style = "pep440"
+versionfile_source = "surface_poly_fit/_version.py"
+versionfile_build = "surface_poly_fit/_version.py"
+tag_prefix = "v"
+parentdir_prefix = "surface_poly_fit-"
+
