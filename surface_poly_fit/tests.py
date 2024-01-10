@@ -5,12 +5,12 @@ import numpy as _np
 import unittest as _unittest
 
 
-have_trimesh = False
-try:
-    import trimesh as _trimesh
-    have_trimesh = True
-except Exception:
-    pass
+# have_trimesh = False
+# try:
+#     import trimesh as _trimesh
+#     have_trimesh = True
+# except Exception:
+#     pass
 
 
 class SurfacePolyFitTest(_unittest.TestCase):
