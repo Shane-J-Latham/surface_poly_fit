@@ -1,0 +1,76 @@
+name: Python Test (vcpkg build)
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+
+jobs:
+
+  python:
+    name: ${{ github.workflow }} Python package on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.10"]
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name:  Install OS tools
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            brew install autoconf automake libtool
+          fi
+
+      - uses: lukka/get-cmake@latest
+        name: Install cmake and ninja (via get-cmake)
+
+      - name: Dump the content of $RUNNER_TEMP
+        run: find $RUNNER_TEMP
+        shell: bash
+      - name: Dump the content of $RUNNER_WORKSPACE
+        run: find $RUNNER_WORKSPACE
+        shell: bash
+
+      - name: Restore artifacts, or setup vcpkg for building artifacts
+        uses: lukka/run-vcpkg@v11
+        with:
+          # This specifies the location of vcpkg, where it is going to be restored from cache, or create from scratch.
+          vcpkgDirectory: '${{ runner.workspace }}/vcpkg'
+          # The Git commit id of vcpkg to be checked out. This is only needed because we are not using a submodule.
+          vcpkgGitCommitId: "c8696863d371ab7f46e213d8f5ca923c4aef2a00"
+          # The vcpkg.json file, which will be part of cache key computation.
+          vcpkgJsonGlob: '**/vcpkg.json'
+        id: runvcpkg
+
+      - name: Prints output of run-vcpkg's action.
+        run: echo "root='${{ steps.runvcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}', triplet='${{ steps.runvcpkg.outputs.RUNVCPKG_VCPKG_DEFAULT_TRIPLET_OUT }}' "
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install python dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install cmake setuptools scikit-build wheel 'versioneer[toml]'
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Build and install with pip
+        env:
+          VCPKG_ROOT: ${{ runner.workspace }}/vcpkg
+        run: python -m pip install --user ${{ github.workspace }}
+
+      - name: Test
+        shell: bash
+        run: |
+          cd ~
+          python -m surface_poly_fit.tests -fv
