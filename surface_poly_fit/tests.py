@@ -37,6 +37,12 @@ class SurfacePolyFitImportTest(SurfacePolyFitTest):
 
         self.assertIsNotNone(_spf_cgal)
 
+    def test_surface_poly_fit_spf_cgal_polyhedral_surface(self):
+        from surface_poly_fit import _spf_cgal
+
+        self.assertTrue(hasattr(_spf_cgal, "PolyhedralSurface"))
+        self.assertIsNotNone(_spf_cgal.PolyhedralSurface())
+
 
 __all__ = [s for s in dir() if not s.startswith('_')]
 

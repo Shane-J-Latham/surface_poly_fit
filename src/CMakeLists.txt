@@ -11,6 +11,8 @@ ENDIF()
 IF ( CGAL_FOUND )
     SET(
       spf_cgal_SRCS
+      polyhedral_surface.cpp
+      polyhedral_surface_py.cpp
       spf_cgal.cpp
       spf_cgal_py.cpp
     )
