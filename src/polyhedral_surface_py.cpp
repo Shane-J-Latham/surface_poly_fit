@@ -7,10 +7,15 @@ namespace spf
 
 namespace py = pybind11;
 
-class PolyhedraSurfacePy
+class PolyhedralSurfacePy
 {
 public:
-    PolyhedraSurfacePy()
+    PolyhedralSurfacePy()
+      : surface_()
+    {
+    }
+
+    PolyhedralSurfacePy(py::object vertices, py::object faces)
       : surface_()
     {
     }
@@ -21,8 +26,9 @@ public:
 
 void export_polyhedral_surface(pybind11::module_ m)
 {
-    py::class_<PolyhedraSurfacePy>(m, "PolyhedralSurface")
+    py::class_<PolyhedralSurfacePy>(m, "PolyhedralSurface")
         .def(py::init<>())
+        .def(py::init<py::object, py::object>(), py::arg("vertices"), py::arg("faces"))
     ;
 }
 

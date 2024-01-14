@@ -28,14 +28,14 @@ namespace spf
 //----------------------------------------------------------------
 
 template < class Refs, class Tag, class Pt, class FGeomTraits >
-class My_vertex:public CGAL::HalfedgeDS_vertex_base < Refs, Tag, Pt >
+class PsVertex:public CGAL::HalfedgeDS_vertex_base < Refs, Tag, Pt >
 {
 typedef typename FGeomTraits::Point_3 Point_3;
 
 public:
- My_vertex(const Point_3 & pt):
+ PsVertex(const Point_3 & pt):
    CGAL::HalfedgeDS_vertex_base < Refs, Tag, Point_3 > (pt){}
-  My_vertex()    {}
+  PsVertex()    {}
 
 };
 
@@ -44,7 +44,7 @@ public:
 //from the FGeomTraits template arg
 //----------------------------------------------------------------
 template < class Refs, class Tag, class FGeomTraits >
-class My_facet:public CGAL::HalfedgeDS_face_base < Refs, Tag >
+class PsFacet:public CGAL::HalfedgeDS_face_base < Refs, Tag >
 {
 public:
  typedef typename FGeomTraits::Vector_3 Vector_3;
@@ -57,7 +57,7 @@ public:
   const Vector_3& get_unit_normal() const { return normal; }
   Vector_3& get_unit_normal() { return normal; }
 
-  //My_facet(): ring_index(-1) {}
+  //PsFacet(): ring_index(-1) {}
   //void setNormal(Vector_3  n) { normal = n; }
 //   //this is for collecting i-th ring neighbors
 //   void setRingIndex(int i) { ring_index = i; }
@@ -84,7 +84,7 @@ public:
 
 } // namespace spf
 
-//XFC: we should have Facet instead of Vertex!
+//XFC: we should have Facet instead of PsVertex!
 namespace boost{
   enum vertex_attribute_t        { vertex_attribute        = 1111 };
   //BOOST_INSTALL_PROPERTY(facet, attribute);
@@ -104,18 +104,18 @@ Facet_PM<TPoly> get_fpm(boost::vertex_attribute_t, TPoly& ) {return Facet_PM<TPo
 // Halfedge
 //----------------------------------------------------------------
  //  int ring_index;
-//   My_halfedge(): ring_index(-1) {}
+//   PsHalfEdge(): ring_index(-1) {}
 //   void setRingIndex(int i) {        ring_index = i;    }
 //   int getRingIndex() {return ring_index;    }
 //   void resetRingIndex() {ring_index = -1;    }
 
 template < class Refs, class Tprev, class Tvertex, class Tface>
-class My_halfedge:public CGAL::HalfedgeDS_halfedge_base < Refs, Tprev, Tvertex, Tface >
+class PsHalfEdge:public CGAL::HalfedgeDS_halfedge_base < Refs, Tprev, Tvertex, Tface >
 {
 public:
   double len;
 public:
-  My_halfedge(): len(-1) {}
+  PsHalfEdge(): len(-1) {}
   double& get_length()  { return len; }
 };
 
@@ -141,7 +141,6 @@ HEdge_PM<TPoly> get_hepm(boost::edge_weight_t, TPoly& )
 {return HEdge_PM<TPoly>();}
 
 
-
 //------------------------------------------------
 // Wrappers [Vertex, Face, Halfedge]
 //------------------------------------------------
@@ -153,7 +152,7 @@ struct Wrappers_VFH:public CGAL::Polyhedron_items_3 {
       typedef typename Traits::Point_3 Point_3;
     } FGeomTraits;
     typedef typename Traits::Point_3 Point_3;
-    typedef My_vertex < Refs, CGAL::Tag_true, Point_3, FGeomTraits > Vertex;
+    typedef PsVertex < Refs, CGAL::Tag_true, Point_3, FGeomTraits > Vertex;
   };
 
   // wrap face
@@ -166,19 +165,19 @@ struct Wrappers_VFH:public CGAL::Polyhedron_items_3 {
       typedef typename Traits::Vector_3 Vector_3;
     } FGeomTraits;
     //custom type instantiated...
-    typedef My_facet < Refs, CGAL::Tag_true, FGeomTraits > Face;
+    typedef PsFacet < Refs, CGAL::Tag_true, FGeomTraits > Face;
   };
 
   // wrap halfedge
   template < class Refs, class Traits > struct Halfedge_wrapper {
-   typedef My_halfedge < Refs,
+   typedef PsHalfEdge < Refs,
       CGAL::Tag_true,
       CGAL::Tag_true, CGAL::Tag_true>  Halfedge;
   };
 };
 
 //------------------------------------------------
-//PolyhedralSurf
+//PolyhedralSurface
 //------------------------------------------------
 
 
@@ -190,7 +189,7 @@ typedef Data_Kernel::Vector_3 Vector_3;
 class PolyhedralSurface: public Polyhedron
 {
 public:
-    PolyhedralSurface()
+  PolyhedralSurface()
   {
   }
 };
