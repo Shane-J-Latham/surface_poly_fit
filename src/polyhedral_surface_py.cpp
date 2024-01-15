@@ -99,7 +99,7 @@ public:
 
   std::int64_t get_num_faces() const
   {
-    return std::int64_t(std::distance(this->surface_.faces_begin(), this->surface_.faces_end()));
+    return std::int64_t(std::distance(this->surface_.facets_begin(), this->surface_.facets_end()));
   }
 
   PolyhedralSurface surface_;
