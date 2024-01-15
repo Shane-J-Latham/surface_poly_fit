@@ -44,6 +44,19 @@ class SurfacePolyFitImportTest(SurfacePolyFitTest):
         self.assertIsNotNone(_spf_cgal.PolyhedralSurface())
 
 
+class PolyhedralSurfaceTest(SurfacePolyFitTest):
+
+    def test_construct(self):
+        from trimesh.primitives import Capsule
+        from surface_poly_fit._spf_cgal import PolyhedralSurface
+
+        self.assertIsNotNone(PolyhedralSurface())
+        trimesh_mesh = Capsule()
+        poly_surf = PolyhedralSurface(vertices=trimesh_mesh.vertices, faces=trimesh_mesh.faces)
+        self.assertEqual(len(trimesh_mesh.vertices), poly_surf.num_vertices)
+        self.assertEqual(len(trimesh_mesh.faces), poly_surf.num_faces)
+
+
 __all__ = [s for s in dir() if not s.startswith('_')]
 
 _unittest.main(__name__)
