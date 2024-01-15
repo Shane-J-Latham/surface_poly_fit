@@ -58,7 +58,6 @@ public:
       py::object face_obj = this->faces_[i_obj];
       const std::int64_t num_face_verts = py::len(face_obj);
 
-      std::cout << "num_face_verts = " << num_face_verts << std::endl;
       bldr.begin_facet();
       for (std::size_t j = 0; j < num_face_verts; ++j)
       {
