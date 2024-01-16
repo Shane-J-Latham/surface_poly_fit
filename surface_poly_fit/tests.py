@@ -3,6 +3,7 @@ Tests for :mod:`surface_poly_fit`.
 """
 import numpy as _np
 import unittest as _unittest
+import logging as _logging
 
 
 # have_trimesh = False
@@ -23,6 +24,8 @@ class SurfacePolyFitTest(_unittest.TestCase):
         """
         """
         _np.random.seed(54317953)
+        # self.logger = logging.getLogger(__name__ + "." + self.__class__.__name__)
+        self.logger = _logging.getLogger()
 
 
 class SurfacePolyFitImportTest(SurfacePolyFitTest):
@@ -56,7 +59,21 @@ class PolyhedralSurfaceTest(SurfacePolyFitTest):
         self.assertEqual(len(trimesh_mesh.vertices), poly_surf.num_vertices)
         self.assertEqual(len(trimesh_mesh.faces), poly_surf.num_faces)
 
+        self.logger.info("")
+        self.logger.info("len(poly surf faces) = %s", len(poly_surf.get_faces()))
+        self.logger.info("poly surf faces = %s", poly_surf.get_faces())
+        self.assertSequenceEqual(
+            trimesh_mesh.vertices.tolist(),
+            poly_surf.get_vertices().tolist()
+        )
+        poly_surf_faces = poly_surf.get_faces()
+        self.assertSequenceEqual(
+            trimesh_mesh.faces.tolist(),
+            poly_surf_faces.tolist() if hasattr(poly_surf_faces, "tolist") else poly_surf_faces
+        )
+
 
 __all__ = [s for s in dir() if not s.startswith('_')]
 
+_logging.basicConfig()
 _unittest.main(__name__)

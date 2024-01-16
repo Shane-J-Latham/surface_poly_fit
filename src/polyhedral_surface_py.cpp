@@ -1,8 +1,12 @@
 
 #include "surface_poly_fit/polyhedral_surface_py.h"
 #include "surface_poly_fit/polyhedral_surface.h"
+
 #include <CGAL/Simple_cartesian.h>
 #include <CGAL/Polyhedron_incremental_builder_3.h>
+
+#include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
 
 namespace spf
 {
@@ -28,6 +32,9 @@ public:
   void operator()(THalfEdgeDS & hds)
   {
     typedef CGAL::Polyhedron_incremental_builder_3<THalfEdgeDS> Builder;
+    typedef typename THalfEdgeDS::Vertex Vertex;
+    typedef typename THalfEdgeDS::Vertex::Point Point;
+
 
     const std::int64_t num_vertices = py::len(this->vertices_);
     const std::int64_t num_faces = py::len(this->faces_);
@@ -47,7 +54,8 @@ public:
           {
               p[j] = py::cast<typename THalfEdgeDS::Traits::Kernel::FT>(this->vertices_[i_obj][j_objs[j]]);
           }
-          bldr.add_vertex(typename THalfEdgeDS::Vertex::Point(p[0], p[1], p[2]));
+          auto vertex_handle = bldr.add_vertex(Point(p[0], p[1], p[2]));
+          vertex_handle->index = i;
       }
     }
 
@@ -96,9 +104,87 @@ public:
     return std::int64_t(std::distance(this->surface_.vertices_begin(), this->surface_.vertices_end()));
   }
 
+  py::object get_vertices()
+  {
+    typedef PolyhedralSurface::HalfedgeDS::Vertex Vertex;
+    typedef Vertex::Point Point;
+
+    std::size_t const shape[2]{std::size_t(this->get_num_vertices()), 3};
+    auto ary = py::array_t<PolyhedralSurface::HalfedgeDS::Traits::Kernel::FT>(shape);
+
+    {
+      auto vtx_it=this->surface_.vertices_begin();
+      std::size_t i = 0;
+      for ( ; i < shape[0]; ++vtx_it, ++i)
+      {
+          Point const & pt = vtx_it->point();
+          for (std::size_t j = 0; j < 3; j++)
+          {
+              ary.mutable_at(i, j) = pt[j];
+          }
+      }
+    }
+    return py::object(ary);
+  }
+
   std::int64_t get_num_faces() const
   {
     return std::int64_t(std::distance(this->surface_.facets_begin(), this->surface_.facets_end()));
+  }
+
+  py::object get_faces()
+  {
+    typedef PolyhedralSurface::HalfedgeDS::Face Face;
+    typedef PolyhedralSurface::HalfedgeDS::Vertex Vertex;
+
+    bool faces_all_same_degree = true;
+    const std::size_t face_degree = this->surface_.facets_begin()->facet_degree();
+    {
+      auto face_it = this->surface_.facets_begin();
+      for (++face_it; face_it != this->surface_.facets_end(); ++face_it)
+      {
+        if (face_it->facet_degree() != face_degree)
+        {
+          faces_all_same_degree = false;
+          break;
+        }
+      }
+    }
+
+    py::object return_ary;
+    if (false)
+    {
+      std::size_t const shape[2]{std::size_t(this->get_num_faces()), face_degree};
+      auto ary = py::array_t<std::int64_t>(shape);
+      auto face_it = this->surface_.facets_begin();
+      for (std::size_t i = 0; i < shape[0]; ++i, ++face_it)
+      {
+        auto halfedge_it = face_it->facet_begin();
+        for (std::size_t j = 0; j < shape[1]; ++j, ++halfedge_it)
+        {
+          ary.mutable_at(i, j) = halfedge_it->vertex()->index;
+        }
+      }
+      return_ary = py::object(ary);
+    }
+    else
+    {
+      py::list face_list;
+      auto face_it = this->surface_.facets_begin();
+      for (std::size_t i = 0; i < this->get_num_faces(); ++i, ++face_it)
+      {
+        py::list vertex_list;
+        auto halfedge_it = face_it->facet_begin();
+        for (std::size_t j = 0; j < face_it->facet_degree(); ++j, ++halfedge_it)
+        {
+          vertex_list.append(halfedge_it->vertex()->index);
+        }
+        face_list.append(vertex_list);
+      }
+      return_ary = py::object(face_list);
+    }
+
+    return return_ary;
   }
 
   PolyhedralSurface surface_;
@@ -113,6 +199,8 @@ void export_polyhedral_surface(pybind11::module_ m)
     .def(py::init<py::object, py::object>(), py::arg("vertices"), py::arg("faces"))
     .def_property_readonly("num_vertices", &PolyhedralSurfacePy::get_num_vertices)
     .def_property_readonly("num_faces", &PolyhedralSurfacePy::get_num_faces)
+    .def("get_vertices", &PolyhedralSurfacePy::get_vertices)
+    .def("get_faces", &PolyhedralSurfacePy::get_faces)
   ;
 }
 

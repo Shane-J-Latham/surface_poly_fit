@@ -3,6 +3,7 @@
 
 #include <CGAL/Simple_cartesian.h>
 #include <CGAL/Polyhedron_3.h>
+#include <CGAL/HalfedgeDS_vector.h>
 #include <CGAL/IO/Polyhedron_iostream.h>
 
 #include <CGAL/property_map.h>
@@ -33,10 +34,26 @@ class PsVertex:public CGAL::HalfedgeDS_vertex_base < Refs, Tag, Pt >
 typedef typename FGeomTraits::Point_3 Point_3;
 
 public:
- PsVertex(const Point_3 & pt):
-   CGAL::HalfedgeDS_vertex_base < Refs, Tag, Point_3 > (pt){}
-  PsVertex()    {}
+ PsVertex(const std::int64_t idx, const Point_3 & pt):
+   CGAL::HalfedgeDS_vertex_base < Refs, Tag, Point_3 > (pt),
+   index(idx)
+  {
+  }
 
+ PsVertex(const Point_3 & pt):
+   CGAL::HalfedgeDS_vertex_base < Refs, Tag, Point_3 > (pt),
+   index(-1)
+  {
+  }
+
+  PsVertex() :
+    CGAL::HalfedgeDS_vertex_base < Refs, Tag, Point_3 > (),
+    index(-1)
+  {
+  }
+
+  // Vertex index.
+  std::int64_t index;
 };
 
 //----------------------------------------------------------------
@@ -183,7 +200,7 @@ struct Wrappers_VFH:public CGAL::Polyhedron_items_3 {
 
 typedef double                DFT;
 typedef CGAL::Simple_cartesian<DFT>  Data_Kernel;
-typedef CGAL::Polyhedron_3 < Data_Kernel, Wrappers_VFH > Polyhedron;
+typedef CGAL::Polyhedron_3 < Data_Kernel, Wrappers_VFH,  CGAL::HalfedgeDS_vector > Polyhedron;
 typedef Data_Kernel::Vector_3 Vector_3;
 
 class PolyhedralSurface: public Polyhedron
