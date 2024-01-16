@@ -152,7 +152,7 @@ public:
     }
 
     py::object return_ary;
-    if (false)
+    if (faces_all_same_degree)
     {
       std::size_t const shape[2]{std::size_t(this->get_num_faces()), face_degree};
       auto ary = py::array_t<std::int64_t>(shape);
