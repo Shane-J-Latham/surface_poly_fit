@@ -71,9 +71,58 @@ class PolyhedralSurfaceTest(SurfacePolyFitTest):
             trimesh_mesh.faces.tolist(),
             poly_surf_faces.tolist() if hasattr(poly_surf_faces, "tolist") else poly_surf_faces
         )
+        self.logger.info("")
+        self.logger.info("")
+        self.logger.info("trimesh_mesh.face_normals:")
+        for i in range(0, 10):
+            self.logger.info(trimesh_mesh.face_normals.tolist()[i])
+        self.logger.info("\npoly_surf.get_face_normals():")
+        for i in range(0, 10):
+            self.logger.info(poly_surf.get_face_normals().tolist()[i])
+        self.assertTrue(
+            _np.allclose(
+                trimesh_mesh.face_normals,
+                poly_surf.get_face_normals()
+            )
+        )
+
+        self.logger.info("")
+        self.logger.info("")
+        self.logger.info("trimesh_mesh.vertex_normals:")
+        for i in range(0, 10):
+            self.logger.info(trimesh_mesh.vertex_normals.tolist()[i])
+        self.logger.info("poly_surf.get_vertex_normals():")
+        for i in range(0, 10):
+            self.logger.info(poly_surf.get_vertex_normals().tolist()[i])
+
+        nrml_angles = \
+            _np.rad2deg(
+                _np.arccos(
+                    _np.sum(
+                        trimesh_mesh.vertex_normals
+                        *
+                        poly_surf.get_vertex_normals(),
+                        axis=1
+                    )
+                )
+            )
+        self.logger.info("")
+        self.logger.info("nrml_angles:\n%s", nrml_angles.tolist()[0:10])
+        self.logger.info("min nrml_angles:\n%s", nrml_angles.min())
+        self.logger.info("max nrml_angles:\n%s", nrml_angles.max())
+        self.logger.info("nrml_angles.shape = %s", nrml_angles.shape)
+
+        self.assertTrue(
+            _np.all(
+                nrml_angles
+                <
+                4.0
+            )
+        )
 
 
 __all__ = [s for s in dir() if not s.startswith('_')]
 
-_logging.basicConfig()
-_unittest.main(__name__)
+if __name__ == "__main__":
+    _logging.basicConfig(level=_logging.DEBUG)
+    _unittest.main(__name__)

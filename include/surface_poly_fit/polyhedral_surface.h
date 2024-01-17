@@ -1,10 +1,13 @@
 #ifndef SURFACE_POLY_FIT_POLYHEDRAL_SURFACE_H
 #define SURFACE_POLY_FIT_POLYHEDRAL_SURFACE_H
 
+#include "surface_poly_fit/polyhedral_surface_ops.h"
+#include "surface_poly_fit/polyhedral_surface_rings.h"
+
 #include <CGAL/Simple_cartesian.h>
 #include <CGAL/Polyhedron_3.h>
 #include <CGAL/HalfedgeDS_vector.h>
-#include <CGAL/IO/Polyhedron_iostream.h>
+#include <CGAL/Polygon_mesh_processing/compute_normal.h>
 
 #include <CGAL/property_map.h>
 #include <boost/graph/properties.hpp>
@@ -32,28 +35,34 @@ template < class Refs, class Tag, class Pt, class FGeomTraits >
 class PsVertex:public CGAL::HalfedgeDS_vertex_base < Refs, Tag, Pt >
 {
 typedef typename FGeomTraits::Point_3 Point_3;
+typedef typename FGeomTraits::Vector_3 Vector_3;
 
 public:
  PsVertex(const std::int64_t idx, const Point_3 & pt):
    CGAL::HalfedgeDS_vertex_base < Refs, Tag, Point_3 > (pt),
-   index(idx)
+   index(idx),
+   normal(0.0, 0.0, 0.0)
   {
   }
 
  PsVertex(const Point_3 & pt):
    CGAL::HalfedgeDS_vertex_base < Refs, Tag, Point_3 > (pt),
-   index(-1)
+   index(-1),
+   normal(0.0, 0.0, 0.0)
   {
   }
 
   PsVertex() :
     CGAL::HalfedgeDS_vertex_base < Refs, Tag, Point_3 > (),
-    index(-1)
+    index(-1),
+    normal(0.0, 0.0, 0.0)
   {
   }
 
   // Vertex index.
   std::int64_t index;
+  // Vertex normal
+  Vector_3 normal;
 };
 
 //----------------------------------------------------------------
@@ -167,8 +176,10 @@ struct Wrappers_VFH:public CGAL::Polyhedron_items_3 {
     typedef struct FGeomTraits {
     public:
       typedef typename Traits::Point_3 Point_3;
+      typedef typename Traits::Vector_3 Vector_3;
     } FGeomTraits;
     typedef typename Traits::Point_3 Point_3;
+    typedef typename Traits::Vector_3 Vector_3;
     typedef PsVertex < Refs, CGAL::Tag_true, Point_3, FGeomTraits > Vertex;
   };
 
@@ -206,9 +217,76 @@ typedef Data_Kernel::Vector_3 Vector_3;
 class PolyhedralSurface: public Polyhedron
 {
 public:
-  PolyhedralSurface()
+
+  struct Hedge_cmp{
+    bool operator()(Halfedge_handle a,  Halfedge_handle b) const{
+      return &*a < &*b;
+    }
+  };
+
+  struct Facet_cmp{
+    bool operator()(Facet_handle a, Facet_handle b) const{
+      return &*a < &*b;
+    }
+  };
+
+  //Vertex property map, with std::map
+  typedef std::map<Vertex*, int> Vertex2int_map_type;
+  typedef boost::associative_property_map< Vertex2int_map_type > Vertex_PM_type;
+  typedef PolyhedralSurfaceRings<PolyhedralSurface, Vertex_PM_type > Poly_rings;
+
+  //Hedge property map, with std::map
+  typedef std::map<Halfedge_handle, double, Hedge_cmp> Hedge2double_map_type;
+  typedef boost::associative_property_map<Hedge2double_map_type> Hedge_PM_type;
+  typedef PolyhedralSurfaceHedgeOps<PolyhedralSurface, Hedge_PM_type> Poly_hedge_ops;
+
+  //Facet property map, with std::map
+  typedef std::map<Facet_handle, Vector_3, Facet_cmp> Facet2normal_map_type;
+  typedef boost::associative_property_map<Facet2normal_map_type> Facet_PM_type;
+  typedef PolyhedralSurfaceFacetOps<PolyhedralSurface, Facet_PM_type> Poly_facet_ops;
+
+  PolyhedralSurface() :
+    facet_map_(),
+    facet_prop_map_(facet_map_),
+    hedge_map_(),
+    hedge_prop_map_(hedge_map_)
   {
   }
+
+  void update_edge_lengths()
+  {
+    Poly_hedge_ops::compute_edges_length(*this, this->hedge_prop_map_);
+  }
+
+  void update_vertex_and_face_normals()
+  {
+    typedef boost::graph_traits<Polyhedron>::vertex_descriptor vertex_descriptor;
+    typedef boost::graph_traits<Polyhedron>::face_descriptor face_descriptor;
+
+    std::map<face_descriptor,Traits::Vector_3> fnormals;
+    std::map<vertex_descriptor,Traits::Vector_3> vnormals;
+    CGAL::Polygon_mesh_processing::compute_normals(
+      *(dynamic_cast<Polyhedron *>(this)),
+      boost::make_assoc_property_map(vnormals),
+      this->facet_prop_map_
+    );
+
+    for (auto vtx_it = this->vertices_begin(); vtx_it != this->vertices_end(); ++vtx_it)
+    {
+      vtx_it->normal = vnormals[vtx_it];
+    }
+  }
+
+  void update()
+  {
+    this->update_edge_lengths();
+    this->update_vertex_and_face_normals();
+  }
+
+  Facet2normal_map_type facet_map_;
+  Facet_PM_type facet_prop_map_;
+  Hedge2double_map_type hedge_map_;
+  Hedge_PM_type hedge_prop_map_;
 };
 
 } // namespace spf

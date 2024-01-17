@@ -97,6 +97,7 @@ public:
   {
     PolyhedralSurfaceBuilderPy<PolyhedralSurface::HalfedgeDS> bldr(vertices, faces);
     this->surface_.delegate(bldr);
+    this->surface_.update();
   }
 
   std::int64_t get_num_vertices() const
@@ -124,6 +125,31 @@ public:
           }
       }
     }
+    return py::object(ary);
+  }
+
+  py::object get_vertex_normals()
+  {
+    typedef PolyhedralSurface::HalfedgeDS::Vertex Vertex;
+    typedef PolyhedralSurface::Traits::Vector_3 Vector;
+    typedef Vertex::Point Point;
+
+    std::size_t const shape[2]{std::size_t(this->get_num_vertices()), 3};
+    auto ary = py::array_t<PolyhedralSurface::HalfedgeDS::Traits::Kernel::FT>(shape);
+
+    {
+      auto vtx_it = this->surface_.vertices_begin();
+      std::size_t i = 0;
+      for ( ; i < shape[0]; ++vtx_it, ++i)
+      {
+          Vector const & nrml = vtx_it->normal;
+          for (std::size_t j = 0; j < 3; j++)
+          {
+              ary.mutable_at(i, j) = nrml[j];
+          }
+      }
+    }
+
     return py::object(ary);
   }
 
@@ -187,6 +213,31 @@ public:
     return return_ary;
   }
 
+  py::object get_face_normals()
+  {
+    typedef PolyhedralSurface::HalfedgeDS::Face Face;
+    typedef PolyhedralSurface::HalfedgeDS::Vertex Vertex;
+    typedef PolyhedralSurface::HalfedgeDS::Traits::Vector_3 Vector;
+
+    std::size_t const shape[2]{std::size_t(this->get_num_faces()), 3};
+    auto ary = py::array_t<PolyhedralSurface::HalfedgeDS::Traits::Kernel::FT>(shape);
+
+    {
+      auto face_it = this->surface_.facets_begin();
+      std::size_t i = 0;
+      for (; face_it != this->surface_.facets_end(); ++face_it, ++i)
+      {
+        Vector const & nrml = this->surface_.facet_prop_map_[face_it];
+        for (std::size_t j = 0; j < 3; j++)
+        {
+            ary.mutable_at(i, j) = nrml[j];
+        }
+      }
+    }
+
+    return py::object(ary);
+  }
+
   PolyhedralSurface surface_;
 };
 
@@ -200,7 +251,9 @@ void export_polyhedral_surface(pybind11::module_ m)
     .def_property_readonly("num_vertices", &PolyhedralSurfacePy::get_num_vertices)
     .def_property_readonly("num_faces", &PolyhedralSurfacePy::get_num_faces)
     .def("get_vertices", &PolyhedralSurfacePy::get_vertices)
+    .def("get_vertex_normals", &PolyhedralSurfacePy::get_vertex_normals)
     .def("get_faces", &PolyhedralSurfacePy::get_faces)
+    .def("get_face_normals", &PolyhedralSurfacePy::get_face_normals)
   ;
 }
 
