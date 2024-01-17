@@ -116,7 +116,7 @@ class PolyhedralSurfaceTest(SurfacePolyFitTest):
             _np.all(
                 nrml_angles
                 <
-                4.0
+                5.0
             )
         )
 

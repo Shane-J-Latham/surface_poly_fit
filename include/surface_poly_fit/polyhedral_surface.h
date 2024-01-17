@@ -258,23 +258,23 @@ public:
     Poly_hedge_ops::compute_edges_length(*this, this->hedge_prop_map_);
   }
 
+  void update_vertex_normals()
+  {
+    Poly_hedge_ops::compute_edges_length(*this, this->hedge_prop_map_);
+    for (auto vtx_it = this->vertices_begin(); vtx_it != this->vertices_end(); ++vtx_it)
+    {
+      vtx_it->normal = Poly_facet_ops::compute_vertex_average_unit_normal(&(*vtx_it), this->facet_prop_map_);
+    }
+  }
+
   void update_vertex_and_face_normals()
   {
-    typedef boost::graph_traits<Polyhedron>::vertex_descriptor vertex_descriptor;
-    typedef boost::graph_traits<Polyhedron>::face_descriptor face_descriptor;
-
-    std::map<face_descriptor,Traits::Vector_3> fnormals;
-    std::map<vertex_descriptor,Traits::Vector_3> vnormals;
-    CGAL::Polygon_mesh_processing::compute_normals(
+    CGAL::Polygon_mesh_processing::compute_face_normals(
       *(dynamic_cast<Polyhedron *>(this)),
-      boost::make_assoc_property_map(vnormals),
       this->facet_prop_map_
     );
 
-    for (auto vtx_it = this->vertices_begin(); vtx_it != this->vertices_end(); ++vtx_it)
-    {
-      vtx_it->normal = vnormals[vtx_it];
-    }
+    this->update_vertex_normals();
   }
 
   void update()
