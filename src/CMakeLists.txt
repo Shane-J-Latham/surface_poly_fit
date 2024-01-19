@@ -15,6 +15,8 @@ IF ( CGAL_FOUND )
       polyhedral_surface_ops.cpp
       polyhedral_surface_rings.cpp
       polyhedral_surface_py.cpp
+      monge_jet_fitting.cpp
+      monge_jet_fitting_py.cpp
       spf_cgal.cpp
       spf_cgal_py.cpp
     )

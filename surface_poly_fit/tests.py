@@ -121,6 +121,71 @@ class PolyhedralSurfaceTest(SurfacePolyFitTest):
         )
 
 
+class MongePolynomial:
+    def __init__(self, k, b, c):
+        self._k = _np.asanyarray(k).copy()
+        self._b = _np.asanyarray(b).copy()
+        self._c = _np.asanyarray(c).copy()
+
+    @property
+    def k(self):
+        return self._k
+
+    @property
+    def b(self):
+        return self._b
+
+    @property
+    def c(self):
+        return self._c
+
+    def evaluate(self, xy):
+        xy = _np.asanyarray(xy)
+        x = xy[:, 0]
+        y = xy[:, 1]
+        k = self.k
+        b = self.b
+        c = self.c
+
+        z = \
+            (
+                0.5 * (k[0] * x**2 + k[1] * y**2)
+                +
+                (1.0 / 6.0) * (
+                    b[0] * (x**3) + 3 * 3 * b[1] * (x**2) * y + 3 * b[2] * x * (y**2) + b[0] * y**3
+                )
+                +
+                (1 / 24) * (
+                    c[0] * x**4 + 4 * c[1] * (x**3) * y + 6 * (x**2) * (y**2)
+                    +
+                    4 * c[2] * x * (y**3) + c[3] * (y**4)
+                )
+            )
+        return z
+
+    def __call__(self, xy):
+        return self.evaluate(xy)
+
+
+class MongeJetFitterTest(SurfacePolyFitTest):
+
+    def test_construct(self):
+        from trimesh.primitives import Capsule
+        from surface_poly_fit._spf_cgal import PolyhedralSurface, MongeJetFitter
+
+        trimesh_mesh = Capsule()
+        poly_surf = PolyhedralSurface(vertices=trimesh_mesh.vertices, faces=trimesh_mesh.faces)
+
+        fitter = MongeJetFitter(poly_surf)
+        self.assertIsNotNone(fitter)
+
+        fitter = MongeJetFitter(poly_surf, 4)
+        self.assertIsNotNone(fitter)
+
+        fitter = MongeJetFitter(poly_surf, 4, 4)
+        self.assertIsNotNone(fitter)
+
+
 __all__ = [s for s in dir() if not s.startswith('_')]
 
 if __name__ == "__main__":
