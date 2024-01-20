@@ -100,48 +100,6 @@ struct MongeFormNumpy
     }
   }
 
-  static
-  void copy(MongeFormNumpy const & src, MongeFormNumpy & dst)
-  {
-    dst.vertex_index = src.vertex_index;
-    dst.degree_monge = src.degree_monge;
-    dst.degree_poly_fit = src.degree_poly_fit;
-    dst.num_rings = src.num_rings;
-    dst.num_fitting_points = src.num_fitting_points;
-    dst.poly_fit_condition_number = src.poly_fit_condition_number;
-
-    for (std::size_t i = 0; i < 3; ++i)
-    {
-      dst.pca_eigenvalues[i] = src.pca_eigenvalues[i];
-    }
-
-    for (std::size_t i = 0; i < 3; ++i)
-    {
-      dst.origin[i] = src.origin[i];
-    }
-    for (std::size_t i = 0; i < 3; ++i)
-    {
-      for (std::size_t j = 0; j < 3; ++j)
-      {
-        dst.direction[i][j] = src.direction[i][j];
-      }
-    }
-
-    for (std::size_t i = 0; i < 2; ++i)
-    {
-        dst.k[i] = src.k[i];
-    }
-    for (std::size_t i = 0; i < 4; ++i)
-    {
-        dst.b[i] = src.b[i];
-    }
-    for (std::size_t i = 0; i < 5; ++i)
-    {
-        dst.c[i] = src.c[i];
-    }
-
-  }
-
   std::int64_t vertex_index;
   std::uint8_t degree_monge;
   std::uint8_t degree_poly_fit;
@@ -191,7 +149,7 @@ public:
     auto ptr = static_cast<MongeFormNumpy *>(req.ptr);
 
     MongeFormNumpy const ary_elem(monge_form);
-    MongeFormNumpy::copy(ary_elem, ptr[0]);
+    ptr[0] = ary_elem;
 
     return py::object(ary);
   }
