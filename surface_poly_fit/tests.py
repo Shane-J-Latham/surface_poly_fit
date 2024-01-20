@@ -149,22 +149,52 @@ class MongePolynomial:
 
         z = \
             (
-                0.5 * (k[0] * x**2 + k[1] * y**2)
+                0.5 * (k[0] * (x**2) + k[1] * (y**2))
                 +
                 (1.0 / 6.0) * (
-                    b[0] * (x**3) + 3 * 3 * b[1] * (x**2) * y + 3 * b[2] * x * (y**2) + b[0] * y**3
+                    b[0] * (x**3) + 3 * b[1] * (x**2) * y + 3 * b[2] * x * (y**2) + b[3] * y**3
                 )
                 +
-                (1 / 24) * (
-                    c[0] * x**4 + 4 * c[1] * (x**3) * y + 6 * (x**2) * (y**2)
+                (1.0 / 24.0) * (
+                    c[0] * (x**4) + 4 * c[1] * (x**3) * y + 6 * c[2] * (x**2) * (y**2)
                     +
-                    4 * c[2] * x * (y**3) + c[3] * (y**4)
+                    4 * c[3] * x * (y**3) + c[4] * (y**4)
                 )
             )
         return z
 
     def __call__(self, xy):
         return self.evaluate(xy)
+
+
+def create_monge_surface(monge_polynomial=None, xy=None):
+    """
+    """
+    from scipy.spatial import Delaunay
+    from surface_poly_fit._spf_cgal import PolyhedralSurface
+
+    if monge_polynomial is None:
+        monge_polynomial = \
+            MongePolynomial(
+                k=(1.0, 0.5),
+                b=(0.45, -0.2, 0.4, -0.50),
+                c=(-0.125, 0.100, 0.05, -0.08, 0.075)
+            )
+    if xy is None:
+        xy = \
+            _np.meshgrid(
+                _np.linspace(-4.0, 4.0, 33),
+                _np.linspace(-4.0, 4.0, 33),
+                indexing="ij"
+            )
+    xy = _np.asarray([xy[0].flatten(), xy[1].flatten()]).T.copy()
+    z = monge_polynomial(xy)
+    z = z.reshape((len(z), 1))
+    dlny = Delaunay(xy)
+    faces = dlny.simplices
+    vertices = _np.hstack((xy, z))
+
+    return PolyhedralSurface(vertices=vertices, faces=faces)
 
 
 class MongeJetFitterTest(SurfacePolyFitTest):
@@ -184,6 +214,58 @@ class MongeJetFitterTest(SurfacePolyFitTest):
 
         fitter = MongeJetFitter(poly_surf, 4, 4)
         self.assertIsNotNone(fitter)
+
+    def test_properties(self):
+        from trimesh.primitives import Capsule
+        from surface_poly_fit._spf_cgal import PolyhedralSurface, MongeJetFitter
+
+        trimesh_mesh = Capsule()
+        poly_surf = PolyhedralSurface(vertices=trimesh_mesh.vertices, faces=trimesh_mesh.faces)
+
+        fitter = MongeJetFitter(poly_surf, 4, 2)
+        self.assertEqual(4, fitter.degree_poly_fit)
+        self.assertEqual(2, fitter.degree_monge)
+        self.assertEqual(15, fitter.min_num_fit_points)
+
+    def test_fit(self):
+        # import trimesh
+        from surface_poly_fit._spf_cgal import MongeJetFitter
+
+        monge_polynomial = \
+            MongePolynomial(
+                k=(0.50, 0.25),
+                b=(0.0, 0.0, 0.0, 0.0),
+                c=(0.0, 0.0, 0.0, 0.0, 0.0)
+            )
+        poly_surface = create_monge_surface(monge_polynomial)
+        self.logger.info("")
+        self.logger.info(
+            "poly_surface (min_z, max_z) = (%s, %s).",
+            poly_surface.get_vertices()[:, 2].min(),
+            poly_surface.get_vertices()[:, 2].max(),
+        )
+        # tmesh = \
+        #    trimesh.Trimesh(vertices=poly_surface.get_vertices(), faces=poly_surface.get_faces())
+        # trimesh.exchange.export.export_mesh(tmesh, "monge_poly_surface.ply")
+
+        monge_origin_vertex_index = poly_surface.num_vertices // 2
+        self.assertTrue(
+            _np.allclose(
+                (0.0, 0.0, 0.0),
+                poly_surface.get_vertices()[monge_origin_vertex_index].tolist()
+            )
+        )
+        fitter = MongeJetFitter(poly_surface, 2, 2)
+        result = fitter.fit_at_vertex(monge_origin_vertex_index, num_rings=16)
+        self.logger.info("Result = %s", result)
+        self.assertAlmostEqual(monge_polynomial.k[0], result["k"][0][0])
+        self.assertAlmostEqual(monge_polynomial.k[1], result["k"][0][1])
+        self.assertTrue(
+            _np.allclose((0.0, 0.0, 0.0), result["origin"][0])
+        )
+        self.assertTrue(
+            _np.allclose(_np.identity(3, dtype=_np.float64), _np.absolute(result["direction"][0]))
+        )
 
 
 __all__ = [s for s in dir() if not s.startswith('_')]

@@ -83,163 +83,156 @@ public:
 };
 
 
-/// Python wrapper for PolyhedralSurface.
-class PolyhedralSurfacePy
+PolyhedralSurfacePy::PolyhedralSurfacePy()
+  : surface_()
 {
-public:
-  PolyhedralSurfacePy()
-    : surface_()
+}
+
+PolyhedralSurfacePy::PolyhedralSurfacePy(py::object vertices, py::object faces)
+  : surface_()
+{
+  PolyhedralSurfaceBuilderPy<PolyhedralSurface::HalfedgeDS> bldr(vertices, faces);
+  this->surface_.delegate(bldr);
+  this->surface_.update();
+}
+
+std::int64_t PolyhedralSurfacePy::get_num_vertices() const
+{
+  return std::int64_t(std::distance(this->surface_.vertices_begin(), this->surface_.vertices_end()));
+}
+
+py::object PolyhedralSurfacePy::get_vertices()
+{
+  typedef PolyhedralSurface::HalfedgeDS::Vertex Vertex;
+  typedef Vertex::Point Point;
+
+  std::size_t const shape[2]{std::size_t(this->get_num_vertices()), 3};
+  auto ary = py::array_t<PolyhedralSurface::HalfedgeDS::Traits::Kernel::FT>(shape);
+
   {
-  }
-
-  PolyhedralSurfacePy(py::object vertices, py::object faces)
-    : surface_()
-  {
-    PolyhedralSurfaceBuilderPy<PolyhedralSurface::HalfedgeDS> bldr(vertices, faces);
-    this->surface_.delegate(bldr);
-    this->surface_.update();
-  }
-
-  std::int64_t get_num_vertices() const
-  {
-    return std::int64_t(std::distance(this->surface_.vertices_begin(), this->surface_.vertices_end()));
-  }
-
-  py::object get_vertices()
-  {
-    typedef PolyhedralSurface::HalfedgeDS::Vertex Vertex;
-    typedef Vertex::Point Point;
-
-    std::size_t const shape[2]{std::size_t(this->get_num_vertices()), 3};
-    auto ary = py::array_t<PolyhedralSurface::HalfedgeDS::Traits::Kernel::FT>(shape);
-
+    auto vtx_it=this->surface_.vertices_begin();
+    std::size_t i = 0;
+    for ( ; i < shape[0]; ++vtx_it, ++i)
     {
-      auto vtx_it=this->surface_.vertices_begin();
-      std::size_t i = 0;
-      for ( ; i < shape[0]; ++vtx_it, ++i)
-      {
-          Point const & pt = vtx_it->point();
-          for (std::size_t j = 0; j < 3; j++)
-          {
-              ary.mutable_at(i, j) = pt[j];
-          }
-      }
-    }
-    return py::object(ary);
-  }
-
-  py::object get_vertex_normals()
-  {
-    typedef PolyhedralSurface::HalfedgeDS::Vertex Vertex;
-    typedef PolyhedralSurface::Traits::Vector_3 Vector;
-    typedef Vertex::Point Point;
-
-    std::size_t const shape[2]{std::size_t(this->get_num_vertices()), 3};
-    auto ary = py::array_t<PolyhedralSurface::HalfedgeDS::Traits::Kernel::FT>(shape);
-
-    {
-      auto vtx_it = this->surface_.vertices_begin();
-      std::size_t i = 0;
-      for ( ; i < shape[0]; ++vtx_it, ++i)
-      {
-          Vector const & nrml = vtx_it->normal;
-          for (std::size_t j = 0; j < 3; j++)
-          {
-              ary.mutable_at(i, j) = nrml[j];
-          }
-      }
-    }
-
-    return py::object(ary);
-  }
-
-  std::int64_t get_num_faces() const
-  {
-    return std::int64_t(std::distance(this->surface_.facets_begin(), this->surface_.facets_end()));
-  }
-
-  py::object get_faces()
-  {
-    typedef PolyhedralSurface::HalfedgeDS::Face Face;
-    typedef PolyhedralSurface::HalfedgeDS::Vertex Vertex;
-
-    bool faces_all_same_degree = true;
-    const std::size_t face_degree = this->surface_.facets_begin()->facet_degree();
-    {
-      auto face_it = this->surface_.facets_begin();
-      for (++face_it; face_it != this->surface_.facets_end(); ++face_it)
-      {
-        if (face_it->facet_degree() != face_degree)
+        Point const & pt = vtx_it->point();
+        for (std::size_t j = 0; j < 3; j++)
         {
-          faces_all_same_degree = false;
-          break;
+            ary.mutable_at(i, j) = pt[j];
         }
-      }
     }
-
-    py::object return_ary;
-    if (faces_all_same_degree)
-    {
-      std::size_t const shape[2]{std::size_t(this->get_num_faces()), face_degree};
-      auto ary = py::array_t<std::int64_t>(shape);
-      auto face_it = this->surface_.facets_begin();
-      for (std::size_t i = 0; i < shape[0]; ++i, ++face_it)
-      {
-        auto halfedge_it = face_it->facet_begin();
-        for (std::size_t j = 0; j < shape[1]; ++j, ++halfedge_it)
-        {
-          ary.mutable_at(i, j) = halfedge_it->vertex()->index;
-        }
-      }
-      return_ary = py::object(ary);
-    }
-    else
-    {
-      py::list face_list;
-      auto face_it = this->surface_.facets_begin();
-      for (std::size_t i = 0; i < this->get_num_faces(); ++i, ++face_it)
-      {
-        py::list vertex_list;
-        auto halfedge_it = face_it->facet_begin();
-        for (std::size_t j = 0; j < face_it->facet_degree(); ++j, ++halfedge_it)
-        {
-          vertex_list.append(halfedge_it->vertex()->index);
-        }
-        face_list.append(vertex_list);
-      }
-      return_ary = py::object(face_list);
-    }
-
-    return return_ary;
   }
+  return py::object(ary);
+}
 
-  py::object get_face_normals()
+py::object PolyhedralSurfacePy::get_vertex_normals()
+{
+  typedef PolyhedralSurface::HalfedgeDS::Vertex Vertex;
+  typedef PolyhedralSurface::Traits::Vector_3 Vector;
+  typedef Vertex::Point Point;
+
+  std::size_t const shape[2]{std::size_t(this->get_num_vertices()), 3};
+  auto ary = py::array_t<PolyhedralSurface::HalfedgeDS::Traits::Kernel::FT>(shape);
+
   {
-    typedef PolyhedralSurface::HalfedgeDS::Face Face;
-    typedef PolyhedralSurface::HalfedgeDS::Vertex Vertex;
-    typedef PolyhedralSurface::HalfedgeDS::Traits::Vector_3 Vector;
-
-    std::size_t const shape[2]{std::size_t(this->get_num_faces()), 3};
-    auto ary = py::array_t<PolyhedralSurface::HalfedgeDS::Traits::Kernel::FT>(shape);
-
+    auto vtx_it = this->surface_.vertices_begin();
+    std::size_t i = 0;
+    for ( ; i < shape[0]; ++vtx_it, ++i)
     {
-      auto face_it = this->surface_.facets_begin();
-      std::size_t i = 0;
-      for (; face_it != this->surface_.facets_end(); ++face_it, ++i)
-      {
-        Vector const & nrml = this->surface_.facet_prop_map_[face_it];
+        Vector const & nrml = vtx_it->normal;
         for (std::size_t j = 0; j < 3; j++)
         {
             ary.mutable_at(i, j) = nrml[j];
         }
-      }
     }
-
-    return py::object(ary);
   }
 
-  PolyhedralSurface surface_;
-};
+  return py::object(ary);
+}
+
+std::int64_t PolyhedralSurfacePy::get_num_faces() const
+{
+  return std::int64_t(std::distance(this->surface_.facets_begin(), this->surface_.facets_end()));
+}
+
+py::object PolyhedralSurfacePy::get_faces()
+{
+  typedef PolyhedralSurface::HalfedgeDS::Face Face;
+  typedef PolyhedralSurface::HalfedgeDS::Vertex Vertex;
+
+  bool faces_all_same_degree = true;
+  const std::size_t face_degree = this->surface_.facets_begin()->facet_degree();
+  {
+    auto face_it = this->surface_.facets_begin();
+    for (++face_it; face_it != this->surface_.facets_end(); ++face_it)
+    {
+      if (face_it->facet_degree() != face_degree)
+      {
+        faces_all_same_degree = false;
+        break;
+      }
+    }
+  }
+
+  py::object return_ary;
+  if (faces_all_same_degree)
+  {
+    std::size_t const shape[2]{std::size_t(this->get_num_faces()), face_degree};
+    auto ary = py::array_t<std::int64_t>(shape);
+    auto face_it = this->surface_.facets_begin();
+    for (std::size_t i = 0; i < shape[0]; ++i, ++face_it)
+    {
+      auto halfedge_it = face_it->facet_begin();
+      for (std::size_t j = 0; j < shape[1]; ++j, ++halfedge_it)
+      {
+        ary.mutable_at(i, j) = halfedge_it->vertex()->index;
+      }
+    }
+    return_ary = py::object(ary);
+  }
+  else
+  {
+    py::list face_list;
+    auto face_it = this->surface_.facets_begin();
+    for (std::size_t i = 0; i < this->get_num_faces(); ++i, ++face_it)
+    {
+      py::list vertex_list;
+      auto halfedge_it = face_it->facet_begin();
+      for (std::size_t j = 0; j < face_it->facet_degree(); ++j, ++halfedge_it)
+      {
+        vertex_list.append(halfedge_it->vertex()->index);
+      }
+      face_list.append(vertex_list);
+    }
+    return_ary = py::object(face_list);
+  }
+
+  return return_ary;
+}
+
+py::object PolyhedralSurfacePy::get_face_normals()
+{
+  typedef PolyhedralSurface::HalfedgeDS::Face Face;
+  typedef PolyhedralSurface::HalfedgeDS::Vertex Vertex;
+  typedef PolyhedralSurface::HalfedgeDS::Traits::Vector_3 Vector;
+
+  std::size_t const shape[2]{std::size_t(this->get_num_faces()), 3};
+  auto ary = py::array_t<PolyhedralSurface::HalfedgeDS::Traits::Kernel::FT>(shape);
+
+  {
+    auto face_it = this->surface_.facets_begin();
+    std::size_t i = 0;
+    for (; face_it != this->surface_.facets_end(); ++face_it, ++i)
+    {
+      Vector const & nrml = this->surface_.facet_prop_map_[face_it];
+      for (std::size_t j = 0; j < 3; j++)
+      {
+          ary.mutable_at(i, j) = nrml[j];
+      }
+    }
+  }
+
+  return py::object(ary);
+}
 
 
 /// Export PolyhedralSurfacePy class to specified python module.

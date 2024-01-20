@@ -217,6 +217,7 @@ typedef Data_Kernel::Vector_3 Vector_3;
 class PolyhedralSurface: public Polyhedron
 {
 public:
+  typedef Traits::Point_3 Point_3;
 
   struct Hedge_cmp{
     bool operator()(Halfedge_handle a,  Halfedge_handle b) const{
@@ -249,8 +250,19 @@ public:
     facet_map_(),
     facet_prop_map_(facet_map_),
     hedge_map_(),
-    hedge_prop_map_(hedge_map_)
+    hedge_prop_map_(hedge_map_),
+    vertex_map_(),
+    vertex_prop_map_(vertex_map_)
   {
+  }
+
+  void reset_vertex_prop_map()
+  {
+    //initialize the tag of all vertices to -1
+    auto vitb = this->vertices_begin();
+    auto vite = this->vertices_end();
+    this->vertex_map_.clear();
+    CGAL_For_all(vitb, vite) put(this->vertex_prop_map_, &(*vitb), -1);
   }
 
   void update_edge_lengths()
@@ -281,12 +293,35 @@ public:
   {
     this->update_edge_lengths();
     this->update_vertex_and_face_normals();
+    this->reset_vertex_prop_map();
+  }
+
+  void gather_fitting_points(
+      Vertex* v,
+      std::size_t num_rings,
+      std::vector<Point_3> & in_points,
+      Vertex_PM_type & vpm
+  )
+  {
+    //container to collect vertices of v on the PolyhedralSurface
+    std::vector<Vertex*> gathered;
+    //initialize
+    in_points.clear();
+
+    Poly_rings::collect_i_rings(v, num_rings, gathered, vpm);
+
+    //store the gathered points
+    std::vector<Vertex*>::iterator
+      itb = gathered.begin(), ite = gathered.end();
+    CGAL_For_all(itb,ite) in_points.push_back((*itb)->point());
   }
 
   Facet2normal_map_type facet_map_;
   Facet_PM_type facet_prop_map_;
   Hedge2double_map_type hedge_map_;
   Hedge_PM_type hedge_prop_map_;
+  Vertex2int_map_type vertex_map_;
+  Vertex_PM_type vertex_prop_map_;
 };
 
 } // namespace spf
