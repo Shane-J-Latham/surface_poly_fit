@@ -31,6 +31,8 @@ struct MongeFormNumpy
   MongeFormNumpy(MongeForm const & mf)
   {
     this->vertex_index = mf.vertex_index_;
+    this->degree_monge = mf.degree_monge_;
+    this->degree_poly_fit = mf.degree_poly_fit_;
     this->num_rings = mf.num_rings_;
     this->num_fitting_points = mf.num_fitting_points_;
     this->poly_fit_condition_number = mf.poly_fit_condition_number_;
@@ -56,23 +58,54 @@ struct MongeFormNumpy
     {
       this->direction[i][2] = mf.normal_direction()[i];
     }
-    this->k[0] = mf.principal_curvatures(0);
-    this->k[1] = mf.principal_curvatures(1);
-    this->b[0] = mf.third_order_coefficients(0);
-    this->b[1] = mf.third_order_coefficients(1);
-    this->b[2] = mf.third_order_coefficients(2);
-    this->b[3] = mf.third_order_coefficients(3);
-    this->c[0] = mf.fourth_order_coefficients(0);
-    this->c[1] = mf.fourth_order_coefficients(1);
-    this->c[2] = mf.fourth_order_coefficients(2);
-    this->c[3] = mf.fourth_order_coefficients(3);
-    this->c[4] = mf.fourth_order_coefficients(4);
+    if (this->degree_monge > 1)
+    {
+      this->k[0] = mf.principal_curvatures(0);
+      this->k[1] = mf.principal_curvatures(1);
+    }
+    else
+    {
+      this->k[0] = 0.0;
+      this->k[1] = 0.0;
+    }
+    if (this->degree_monge > 2)
+    {
+      this->b[0] = mf.third_order_coefficients(0);
+      this->b[1] = mf.third_order_coefficients(1);
+      this->b[2] = mf.third_order_coefficients(2);
+      this->b[3] = mf.third_order_coefficients(3);
+    }
+    else
+    {
+      this->b[0] = 0.0;
+      this->b[1] = 0.0;
+      this->b[2] = 0.0;
+      this->b[3] = 0.0;
+    }
+    if (this->degree_monge > 3)
+    {
+      this->c[0] = mf.fourth_order_coefficients(0);
+      this->c[1] = mf.fourth_order_coefficients(1);
+      this->c[2] = mf.fourth_order_coefficients(2);
+      this->c[3] = mf.fourth_order_coefficients(3);
+      this->c[4] = mf.fourth_order_coefficients(4);
+    }
+    else
+    {
+      this->c[0] = 0.0;
+      this->c[1] = 0.0;
+      this->c[2] = 0.0;
+      this->c[3] = 0.0;
+      this->c[4] = 0.0;
+    }
   }
 
   static
   void copy(MongeFormNumpy const & src, MongeFormNumpy & dst)
   {
     dst.vertex_index = src.vertex_index;
+    dst.degree_monge = src.degree_monge;
+    dst.degree_poly_fit = src.degree_poly_fit;
     dst.num_rings = src.num_rings;
     dst.num_fitting_points = src.num_fitting_points;
     dst.poly_fit_condition_number = src.poly_fit_condition_number;
@@ -109,26 +142,9 @@ struct MongeFormNumpy
 
   }
 
-  void zero_coefficients_for_degree(std::int64_t degree_monge)
-  {
-    if (degree_monge < 4)
-    {
-      this->c[0] = 0.0;
-      this->c[1] = 0.0;
-      this->c[2] = 0.0;
-      this->c[3] = 0.0;
-      this->c[4] = 0.0;
-    }
-    if (degree_monge < 3)
-    {
-      this->b[0] = 0.0;
-      this->b[1] = 0.0;
-      this->b[2] = 0.0;
-      this->b[3] = 0.0;
-    }
-  }
-
   std::int64_t vertex_index;
+  std::uint8_t degree_monge;
+  std::uint8_t degree_poly_fit;
   std::int64_t num_rings;
   std::int64_t num_fitting_points;
   double poly_fit_condition_number;
@@ -176,7 +192,6 @@ public:
 
     MongeFormNumpy const ary_elem(monge_form);
     MongeFormNumpy::copy(ary_elem, ptr[0]);
-    ptr[0].zero_coefficients_for_degree(degree_monge);
 
     return py::object(ary);
   }
@@ -205,6 +220,8 @@ void export_monge_jet_fitter(pybind11::module_ m)
   PYBIND11_NUMPY_DTYPE(
       MongeFormNumpy,
       vertex_index,
+      degree_monge,
+      degree_poly_fit,
       num_rings,
       num_fitting_points,
       poly_fit_condition_number,

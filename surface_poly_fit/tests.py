@@ -255,9 +255,14 @@ class MongeJetFitterTest(SurfacePolyFitTest):
                 poly_surface.get_vertices()[monge_origin_vertex_index].tolist()
             )
         )
-        fitter = MongeJetFitter(poly_surface, 2, 2)
+        degree_monge = 2
+        degree_poly_fit = 2
+        fitter = MongeJetFitter(poly_surface, degree_poly_fit, degree_monge)
         result = fitter.fit_at_vertex(monge_origin_vertex_index, num_rings=16)
         self.logger.info("Result = %s", result)
+        self.assertEqual(monge_origin_vertex_index, result["vertex_index"][0])
+        self.assertEqual(degree_monge, result["degree_monge"][0])
+        self.assertEqual(degree_poly_fit, result["degree_poly_fit"][0])
         self.assertAlmostEqual(monge_polynomial.k[0], result["k"][0][0])
         self.assertAlmostEqual(monge_polynomial.k[1], result["k"][0][1])
         self.assertTrue(
@@ -266,6 +271,14 @@ class MongeJetFitterTest(SurfacePolyFitTest):
         self.assertTrue(
             _np.allclose(_np.identity(3, dtype=_np.float64), _np.absolute(result["direction"][0]))
         )
+        if degree_monge < 3:
+            self.assertTrue(
+                _np.all(result["b"][0] == 0.0)
+            )
+        if degree_monge < 4:
+            self.assertTrue(
+                _np.all(result["c"][0] == 0.0)
+            )
 
 
 __all__ = [s for s in dir() if not s.startswith('_')]

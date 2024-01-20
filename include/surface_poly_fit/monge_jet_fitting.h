@@ -53,25 +53,9 @@ public:
     {
     }
 
-    void zero_coefficients_for_degree(std::int64_t degree_monge)
-    {
-      if (degree_monge < 4)
-      {
-        this->m_coefficients[10] = 0.0;
-        this->m_coefficients[9] = 0.0;
-        this->m_coefficients[8] = 0.0;
-        this->m_coefficients[7] = 0.0;
-        this->m_coefficients[6] = 0.0;
-      }
-      if (degree_monge < 3)
-      {
-        this->m_coefficients[5] = 0.0;
-        this->m_coefficients[4] = 0.0;
-        this->m_coefficients[3] = 0.0;
-        this->m_coefficients[2] = 0.0;
-      }
-    }
     std::int64_t vertex_index_;
+    std::uint8_t degree_monge_;
+    std::uint8_t degree_poly_fit_;
     std::int64_t num_rings_;
     std::int64_t num_fitting_points_;
     LocalFloatType poly_fit_condition_number_;
@@ -121,9 +105,10 @@ public:
               monge_fit.pca_basis(1).first,
               monge_fit.pca_basis(2).first
           );
-      monge_form.zero_coefficients_for_degree(this->degree_monge_);
     }
     monge_form.vertex_index_ = vertex_index;
+    monge_form.degree_monge_ = this->degree_monge_;
+    monge_form.degree_poly_fit_ = this->degree_poly_fit_;
     monge_form.num_rings_ = num_rings;
     monge_form.num_fitting_points_ = this->in_points_.size();
 
