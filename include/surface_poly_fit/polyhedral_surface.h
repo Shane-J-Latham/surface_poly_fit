@@ -12,6 +12,8 @@
 
 #include <CGAL/property_map.h>
 #include <boost/graph/properties.hpp>
+#include <boost/unordered_map.hpp>
+#include <boost/unordered_set.hpp>
 
 
 #include <algorithm>
@@ -219,8 +221,8 @@ public:
   typedef typename HalfedgeDS::Halfedge Halfedge;
   typedef typename Halfedge::Facet Facet;
   typedef typename Halfedge::Facet_handle Facet_handle;
-  typedef std::unordered_map<std::int64_t, std::int64_t> VertexIndexToNewIndexMap;
-  typedef std::unordered_set<Facet_handle> FacetHandleSet;
+  typedef boost::unordered_map<std::int64_t, std::int64_t> VertexIndexToNewIndexMap;
+  typedef boost::unordered_set<Facet_handle> FacetHandleSet;
   typedef std::vector<Facet_handle> FacetHandleStlVec;
   typedef CGAL::Polyhedron_incremental_builder_3<HalfedgeDS> Builder;
 
