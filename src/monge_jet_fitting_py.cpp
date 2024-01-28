@@ -158,7 +158,7 @@ public:
   {
     MongeForm mf_result =
         this->monge_fitter_.fit_at_vertex(
-            py::cast<PolyhedralSurfacePy &>(this->poly_surface_obj_).surface_,
+            *(py::cast<PolyhedralSurfacePy &>(this->poly_surface_obj_).surface_),
             vertex_index,
             num_rings
         );

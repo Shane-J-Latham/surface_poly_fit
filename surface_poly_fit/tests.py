@@ -27,6 +27,23 @@ class SurfacePolyFitTest(_unittest.TestCase):
         # self.logger = logging.getLogger(__name__ + "." + self.__class__.__name__)
         self.logger = _logging.getLogger()
 
+    def export_mesh(self, file_name, poly_surface):
+        """
+        """
+        import trimesh
+        from trimesh.exchange.export import export_mesh
+
+        self.logger.info("vertices=%s", poly_surface.get_vertices())
+        self.logger.info("faces=%s", poly_surface.get_faces())
+        mesh = \
+            trimesh.Trimesh(
+                vertices=poly_surface.get_vertices(),
+                faces=poly_surface.get_faces(),
+                process=False,
+                validate=False
+            )
+        export_mesh(mesh, file_name)
+
 
 class SurfacePolyFitImportTest(SurfacePolyFitTest):
 
@@ -120,7 +137,6 @@ class PolyhedralSurfaceTest(SurfacePolyFitTest):
             )
         )
 
-    @_unittest.skip("Broken.")
     def test_create_ring_patch(self):
         poly_surface = create_monge_surface()
         origin_vertex_index = poly_surface.num_vertices // 2
@@ -130,9 +146,17 @@ class PolyhedralSurfaceTest(SurfacePolyFitTest):
                 poly_surface.get_vertices()[origin_vertex_index].tolist()
             )
         )
+        # self.export_mesh("monge_surface.ply", poly_surface)
+
         patch_surface = poly_surface.create_ring_patch(origin_vertex_index, 1)
-        self.assertEqual(9, patch_surface.num_vertices)
-        self.assertEqual(8, patch_surface.num_faces)
+        # self.export_mesh("monge_surface_patch_ring1.ply", patch_surface)
+        self.assertEqual(5, patch_surface.num_vertices)
+        self.assertEqual(4, patch_surface.num_faces)
+
+        patch_surface = poly_surface.create_ring_patch(origin_vertex_index, 2)
+        # self.export_mesh("monge_surface_patch_ring2.ply", patch_surface)
+        self.assertEqual(21, patch_surface.num_vertices)
+        self.assertEqual(28, patch_surface.num_faces)
 
 
 class MongePolynomial:

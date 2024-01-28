@@ -240,7 +240,21 @@ public:
     VertexIndexToNewIndexMap vtxIdxToNewIdxMap;
 
     const std::int64_t num_vertices = this->vertices_.size();
-    const std::int64_t num_faces = 0;
+
+    // Calculate the number of faces.
+    FacetHandleSet facetHdlSet;
+    for (std::int64_t i = 0; i < num_vertices; ++i)
+    {
+      auto orig_vtx_handle = this->vertices_[i];
+      auto he_it = orig_vtx_handle->vertex_begin();
+      do
+      {
+        auto facetHdl = he_it->facet();
+        facetHdlSet.insert(facetHdl);
+      } while (++he_it != orig_vtx_handle->vertex_begin());
+    }
+    const std::int64_t num_faces = facetHdlSet.size();
+    facetHdlSet.clear();
 
     Builder bldr(hds, true);
 
@@ -258,30 +272,40 @@ public:
     }
 
     // Add facets.
-    FacetHandleSet facetHdlSet;
+    facetHdlSet.clear();
     for (std::int64_t i = 0; i < num_vertices; ++i)
     {
       auto orig_vtx_handle = this->vertices_[i];
-      auto facetHdl = orig_vtx_handle->halfedge()->facet();
-      if (facetHdlSet.find(facetHdl) == facetHdlSet.end())
+      auto he_it = orig_vtx_handle->vertex_begin();
+      std::vector<std::int64_t> vertex_indices;
+      do
       {
-        facetHdlSet.insert(facetHdl);
-        bldr.begin_facet();
-        auto he_it = facetHdl->facet_begin();
-        do
+        auto facetHdl = he_it->facet();
+        if (facetHdlSet.find(facetHdl) == facetHdlSet.end())
         {
-
-          auto new_vtx_idx_it = vtxIdxToNewIdxMap.find(he_it->vertex()->index);
-          if (new_vtx_idx_it != vtxIdxToNewIdxMap.end())
+          facetHdlSet.insert(facetHdl);
+          auto fct_he_it = facetHdl->facet_begin();
+          vertex_indices.clear();
+          do
           {
-              bldr.add_vertex_to_facet(new_vtx_idx_it->second);
+            auto new_vtx_idx_it = vtxIdxToNewIdxMap.find(fct_he_it->vertex()->index);
+            if (new_vtx_idx_it != vtxIdxToNewIdxMap.end())
+            {
+              vertex_indices.push_back(new_vtx_idx_it->second);
+            }
+            else
+            {
+              break;
+            }
           }
-          ++he_it;
-        }
-        while (he_it != facetHdl->facet_begin());
+          while (++fct_he_it != facetHdl->facet_begin());
 
-        bldr.end_facet();
-      }
+          if (facetHdl->facet_degree() == vertex_indices.size())
+          {
+            bldr.add_facet(vertex_indices.begin(), vertex_indices.end());
+          }
+        }
+      } while (++he_it != orig_vtx_handle->vertex_begin());
     }
 
     bldr.end_surface();
