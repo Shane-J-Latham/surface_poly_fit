@@ -30,6 +30,8 @@ public:
 
   py::object get_face_normals();
 
+  py::object create_ring_patch(const std::int64_t vertex_index, const std::int64_t num_rings);
+
   PolyhedralSurface surface_;
 };
 

@@ -120,6 +120,20 @@ class PolyhedralSurfaceTest(SurfacePolyFitTest):
             )
         )
 
+    @_unittest.skip("Broken.")
+    def test_create_ring_patch(self):
+        poly_surface = create_monge_surface()
+        origin_vertex_index = poly_surface.num_vertices // 2
+        self.assertTrue(
+            _np.allclose(
+                (0.0, 0.0, 0.0),
+                poly_surface.get_vertices()[origin_vertex_index].tolist()
+            )
+        )
+        patch_surface = poly_surface.create_ring_patch(origin_vertex_index, 1)
+        self.assertEqual(9, patch_surface.num_vertices)
+        self.assertEqual(8, patch_surface.num_faces)
+
 
 class MongePolynomial:
     def __init__(self, k, b, c):

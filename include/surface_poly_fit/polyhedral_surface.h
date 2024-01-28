@@ -8,6 +8,7 @@
 #include <CGAL/Polyhedron_3.h>
 #include <CGAL/HalfedgeDS_vector.h>
 #include <CGAL/Polygon_mesh_processing/compute_normal.h>
+#include <CGAL/Polyhedron_incremental_builder_3.h>
 
 #include <CGAL/property_map.h>
 #include <boost/graph/properties.hpp>
@@ -16,6 +17,7 @@
 #include <algorithm>
 #include <vector>
 #include <list>
+#include <memory>
 
 #include <cstdlib>
 #include <cstdio>
@@ -204,11 +206,93 @@ struct Wrappers_VFH:public CGAL::Polyhedron_items_3 {
   };
 };
 
+template <typename THalfedgeDS>
+class PolyhedralPatchBuilder: public CGAL::Modifier_base<THalfedgeDS>
+{
+public:
+  typedef CGAL::Modifier_base<THalfedgeDS> Inherited;
+  typedef THalfedgeDS HalfedgeDS;
+  typedef typename HalfedgeDS::Vertex Vertex;
+  typedef typename HalfedgeDS::Vertex_handle Vertex_handle;
+  typedef typename HalfedgeDS::Vertex::Point Point;
+  typedef std::vector < Vertex * > VertexStlVec;
+  typedef typename HalfedgeDS::Halfedge Halfedge;
+  typedef typename Halfedge::Facet Facet;
+  typedef typename Halfedge::Facet_handle Facet_handle;
+  typedef std::unordered_map<std::int64_t, std::int64_t> VertexIndexToNewIndexMap;
+  typedef std::unordered_set<Facet_handle> FacetHandleSet;
+  typedef std::vector<Facet_handle> FacetHandleStlVec;
+  typedef CGAL::Polyhedron_incremental_builder_3<HalfedgeDS> Builder;
+
+  PolyhedralPatchBuilder(
+      std::vector < Vertex * > const & vertices
+  )
+    : Inherited(),
+      vertices_(vertices)
+  {
+
+  }
+
+  void operator()(HalfedgeDS & hds)
+  {
+    VertexIndexToNewIndexMap vtxIdxToNewIdxMap;
+
+    const std::int64_t num_vertices = this->vertices_.size();
+    const std::int64_t num_faces = 0;
+
+    Builder bldr(hds, true);
+
+    bldr.begin_surface(num_vertices, num_faces, 0, Builder::ABSOLUTE_INDEXING);
+
+    {
+      // Add vertices.
+      for (std::int64_t i = 0; i < num_vertices; ++i)
+      {
+        auto orig_vtx_handle = this->vertices_[i];
+        auto new_vertex_handle = bldr.add_vertex(orig_vtx_handle->point());
+        new_vertex_handle->index = i;
+        vtxIdxToNewIdxMap[orig_vtx_handle->index] = new_vertex_handle->index;
+      }
+    }
+
+    // Add facets.
+    FacetHandleSet facetHdlSet;
+    for (std::int64_t i = 0; i < num_vertices; ++i)
+    {
+      auto orig_vtx_handle = this->vertices_[i];
+      auto facetHdl = orig_vtx_handle->halfedge()->facet();
+      if (facetHdlSet.find(facetHdl) == facetHdlSet.end())
+      {
+        facetHdlSet.insert(facetHdl);
+        bldr.begin_facet();
+        auto he_it = facetHdl->facet_begin();
+        do
+        {
+
+          auto new_vtx_idx_it = vtxIdxToNewIdxMap.find(he_it->vertex()->index);
+          if (new_vtx_idx_it != vtxIdxToNewIdxMap.end())
+          {
+              bldr.add_vertex_to_facet(new_vtx_idx_it->second);
+          }
+          ++he_it;
+        }
+        while (he_it != facetHdl->facet_begin());
+
+        bldr.end_facet();
+      }
+    }
+
+    bldr.end_surface();
+  }
+
+  VertexStlVec const & vertices_;
+};
+
+
+
 //------------------------------------------------
 //PolyhedralSurface
 //------------------------------------------------
-
-
 typedef double                DFT;
 typedef CGAL::Simple_cartesian<DFT>  Data_Kernel;
 typedef CGAL::Polyhedron_3 < Data_Kernel, Wrappers_VFH,  CGAL::HalfedgeDS_vector > Polyhedron;
@@ -217,6 +301,8 @@ typedef Data_Kernel::Vector_3 Vector_3;
 class PolyhedralSurface: public Polyhedron
 {
 public:
+  typedef std::unique_ptr<PolyhedralSurface> PolyhedralSurfacePtr;
+
   typedef Traits::Point_3 Point_3;
 
   struct Hedge_cmp{
@@ -316,6 +402,23 @@ public:
     CGAL_For_all(itb,ite) in_points.push_back((*itb)->point());
   }
 
+  PolyhedralSurfacePtr create_ring_patch(
+      std::size_t vertex_index,
+      std::size_t num_rings
+  )
+  {
+    auto vtx_it = this->vertices_begin() + vertex_index;
+    std::vector<Vertex*> gathered;
+    Poly_rings::collect_i_rings(&(*vtx_it), num_rings, gathered, this->vertex_prop_map_);
+
+    PolyhedralPatchBuilder<HalfedgeDS> bldr(gathered);
+    PolyhedralSurfacePtr polyPatchPtr = std::make_unique<PolyhedralSurface>();
+    polyPatchPtr->delegate(bldr);
+    polyPatchPtr->update();
+
+    return polyPatchPtr;
+  }
+
   Facet2normal_map_type facet_map_;
   Facet_PM_type facet_prop_map_;
   Hedge2double_map_type hedge_map_;
@@ -323,6 +426,8 @@ public:
   Vertex2int_map_type vertex_map_;
   Vertex_PM_type vertex_prop_map_;
 };
+
+
 
 } // namespace spf
 

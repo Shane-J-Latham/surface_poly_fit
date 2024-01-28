@@ -234,6 +234,16 @@ py::object PolyhedralSurfacePy::get_face_normals()
   return py::object(ary);
 }
 
+py::object PolyhedralSurfacePy::create_ring_patch(
+    const std::int64_t vertex_index,
+    const std::int64_t num_rings
+)
+{
+  py::object ret_obj;
+  ret_obj = py::cast(this->surface_.create_ring_patch(vertex_index, num_rings));
+  return ret_obj;
+}
+
 
 /// Export PolyhedralSurfacePy class to specified python module.
 void export_polyhedral_surface(pybind11::module_ m)
@@ -247,6 +257,11 @@ void export_polyhedral_surface(pybind11::module_ m)
     .def("get_vertex_normals", &PolyhedralSurfacePy::get_vertex_normals)
     .def("get_faces", &PolyhedralSurfacePy::get_faces)
     .def("get_face_normals", &PolyhedralSurfacePy::get_face_normals)
+    .def(
+        "create_ring_patch",
+        &PolyhedralSurfacePy::create_ring_patch,
+        py::arg("vertex_index"), py::arg("num_rings")
+    )
   ;
 }
 
