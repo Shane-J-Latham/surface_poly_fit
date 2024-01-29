@@ -137,6 +137,18 @@ class PolyhedralSurfaceTest(SurfacePolyFitTest):
             )
         )
 
+    def test_set_vertex_normals(self):
+        from trimesh.primitives import Capsule
+        from surface_poly_fit._spf_cgal import PolyhedralSurface
+
+        trimesh_mesh = Capsule()
+        poly_surf = PolyhedralSurface(vertices=trimesh_mesh.vertices, faces=trimesh_mesh.faces)
+        self.assertTrue(_np.any(poly_surf.get_vertex_normals() != trimesh_mesh.vertex_normals))
+        poly_surf.set_vertex_normals(trimesh_mesh.vertex_normals)
+        self.assertTrue(_np.all(poly_surf.get_vertex_normals() == trimesh_mesh.vertex_normals))
+
+        self.assertRaises(Exception, poly_surf.set_vertex_normals, trimesh_mesh.vertex_normals[1:])
+
     def test_create_ring_patch(self):
         poly_surface = create_monge_surface()
         origin_vertex_index = poly_surface.num_vertices // 2

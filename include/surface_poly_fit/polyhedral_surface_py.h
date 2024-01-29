@@ -29,6 +29,8 @@ public:
 
   py::object get_vertex_normals();
 
+  void set_vertex_normals(py::object normals);
+
   std::int64_t get_num_faces() const;
 
   py::object get_faces();

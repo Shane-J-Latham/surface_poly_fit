@@ -2,6 +2,8 @@
 #include "surface_poly_fit/polyhedral_surface_py.h"
 #include "surface_poly_fit/polyhedral_surface.h"
 
+#include <sstream>
+
 #include <CGAL/Simple_cartesian.h>
 #include <CGAL/Polyhedron_incremental_builder_3.h>
 
@@ -154,6 +156,34 @@ py::object PolyhedralSurfacePy::get_vertex_normals()
   return py::object(ary);
 }
 
+void PolyhedralSurfacePy::set_vertex_normals(py::object normalsObj)
+{
+  typedef PolyhedralSurface::Traits::Vector_3 Vector;
+
+  const std::size_t num_normals = py::len(normalsObj);
+  if (num_normals != this->get_num_vertices())
+  {
+    std::stringstream msg;
+    msg
+      << "Got num_normals="  << num_normals
+      << " != num_vertices=" << this->get_num_vertices();
+    throw std::runtime_error(msg.str());
+  }
+  py::object j_objs[] = {py::cast(long(0)), py::cast(long(1)), py::cast(long(2))};
+  auto vtx_it = this->surface_->vertices_begin();
+  std::size_t i = 0;
+  for ( ; (vtx_it != this->surface_->vertices_end()) && (i < num_normals); ++vtx_it, ++i)
+  {
+    PolyhedralSurface::Traits::Kernel::FT nrml[3];
+    py::object i_obj(py::cast(i));
+    for (std::int64_t j = 0; j < 3; ++j)
+    {
+      nrml[j] = py::cast<typename PolyhedralSurface::Traits::Kernel::FT>(normalsObj[i_obj][j_objs[j]]);
+    }
+    vtx_it->normal = Vector(nrml[0], nrml[1], nrml[2]);
+  }
+}
+
 std::int64_t PolyhedralSurfacePy::get_num_faces() const
 {
   return std::int64_t(std::distance(this->surface_->facets_begin(), this->surface_->facets_end()));
@@ -263,6 +293,7 @@ void export_polyhedral_surface(pybind11::module_ m)
     .def_property_readonly("num_faces", &PolyhedralSurfacePy::get_num_faces)
     .def("get_vertices", &PolyhedralSurfacePy::get_vertices)
     .def("get_vertex_normals", &PolyhedralSurfacePy::get_vertex_normals)
+    .def("set_vertex_normals", &PolyhedralSurfacePy::set_vertex_normals)
     .def("get_faces", &PolyhedralSurfacePy::get_faces)
     .def("get_face_normals", &PolyhedralSurfacePy::get_face_normals)
     .def(
