@@ -222,9 +222,9 @@ public:
   typedef typename Halfedge::Facet Facet;
   typedef typename Halfedge::Facet_handle Facet_handle;
   typedef boost::unordered_map<std::int64_t, std::int64_t> VertexIndexToNewIndexMap;
-  typedef boost::unordered_set<Facet_handle> FacetHandleSet;
   typedef std::vector<Facet_handle> FacetHandleStlVec;
   typedef CGAL::Polyhedron_incremental_builder_3<HalfedgeDS> Builder;
+  typedef boost::unordered_set<Facet_handle, CGAL::Handle_hash_function> FacetHandleSet;
 
   PolyhedralPatchBuilder(
       std::vector < Vertex * > const & vertices
