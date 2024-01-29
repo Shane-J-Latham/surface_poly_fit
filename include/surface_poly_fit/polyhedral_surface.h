@@ -345,18 +345,18 @@ public:
     }
   };
 
-  //Vertex property map, with std::map
-  typedef std::map<Vertex*, int> Vertex2int_map_type;
+  //Vertex property map, with boost::unordered_map
+  typedef std::unordered_map<Vertex*, int, CGAL::Handle_hash_function> Vertex2int_map_type;
   typedef boost::associative_property_map< Vertex2int_map_type > Vertex_PM_type;
   typedef PolyhedralSurfaceRings<PolyhedralSurface, Vertex_PM_type > Poly_rings;
 
-  //Hedge property map, with std::map
-  typedef std::map<Halfedge_handle, double, Hedge_cmp> Hedge2double_map_type;
+  //Hedge property map, with boost::unordered_map
+  typedef boost::unordered_map<Halfedge_handle, double, CGAL::Handle_hash_function> Hedge2double_map_type;
   typedef boost::associative_property_map<Hedge2double_map_type> Hedge_PM_type;
   typedef PolyhedralSurfaceHedgeOps<PolyhedralSurface, Hedge_PM_type> Poly_hedge_ops;
 
-  //Facet property map, with std::map
-  typedef std::map<Facet_handle, Vector_3, Facet_cmp> Facet2normal_map_type;
+  //Facet property map, with boost::unordered_map
+  typedef boost::unordered_map<Facet_handle, Vector_3, CGAL::Handle_hash_function> Facet2normal_map_type;
   typedef boost::associative_property_map<Facet2normal_map_type> Facet_PM_type;
   typedef PolyhedralSurfaceFacetOps<PolyhedralSurface, Facet_PM_type> Poly_facet_ops;
 
