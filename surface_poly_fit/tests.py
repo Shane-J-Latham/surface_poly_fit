@@ -168,6 +168,7 @@ class PolyhedralSurfaceTest(SurfacePolyFitTest):
         self.assertEqual(77, patch_surface.num_vertices)
         self.assertEqual(124, patch_surface.num_faces)
 
+
 class MongePolynomial:
     def __init__(self, k, b, c):
         self._k = _np.asanyarray(k).copy()
