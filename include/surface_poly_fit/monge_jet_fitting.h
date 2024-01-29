@@ -85,7 +85,7 @@ public:
     typedef typename Inherited::Aff_transformation Aff_transformation;
 
     template <class InputIterator>
-    std::pair<Matrix_3x3, Matrix_3x1> calculate_PCA_basis(InputIterator begin, InputIterator end)
+    std::pair<Matrix_3x3, Matrix_3x1> calculate_PCA_basis(InputIterator begin, InputIterator end) const
     {
       int n = std::distance(begin, end);
       typename LocalKernel::FT x, y, z,
@@ -156,24 +156,26 @@ public:
           );
     }
 
-    void set_world_to_fitting_from_normal(Vector_3 const & fit_normal)
+    Matrix_3x3 calc_rotation_matrix_from_normal(Vector_3 const & normal) const
     {
       const Matrix_3x1 z_dir(0.0, 0.0, 0.0);
-      const Matrix_3x1 nrml_dir(fit_normal[0], fit_normal[1], fit_normal[2]);
+      const Matrix_3x1 nrml_dir(normal[0], normal[1], normal[2]);
       Matrix_3x3 R;
-      R = Quaternion().setFromTwoVectors(z_dir, nrml_dir).toRotationMatrix().transpose();
+      R = Quaternion().setFromTwoVectors(z_dir, nrml_dir).toRotationMatrix();
 
-      Aff_transformation
-        change_basis (R(0, 0), R(0, 1), R(0, 2),
-                      R(1, 0), R(1, 1), R(1, 2),
-                      R(2, 0), R(2, 1), R(2, 2));
+      return R;
+    }
 
-      this->change_world2fitting = change_basis;
+    void set_world_to_fitting_from_normal(Vector_3 const & fit_normal)
+    {
+      this->set_world_to_fitting_from_rotation(
+          this->calc_rotation_matrix_from_normal(fit_normal)
+      );
     }
 
     void set_world_to_fitting_from_rotation(Matrix_3x3 const & R)
     {
-      Matrix_3x3 Rt = R.transpose();
+      Matrix_3x3 const Rt = R.transpose();
 
       Aff_transformation
         change_basis (Rt(0, 0), Rt(0, 1), Rt(0, 2),

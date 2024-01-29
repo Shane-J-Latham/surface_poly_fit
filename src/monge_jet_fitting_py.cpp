@@ -191,7 +191,9 @@ void export_monge_jet_fitter(pybind11::module_ m)
       c
   );
 
-  py::class_<MongeJetFitterPy>(m, "MongeJetFitter")
+  py::class_<MongeJetFitterPy> mjf_class(m, "MongeJetFitter");
+
+  mjf_class
     .def(
         py::init<py::object, std::size_t, std::size_t>(),
         py::arg("poly_surface"),
@@ -208,6 +210,14 @@ void export_monge_jet_fitter(pybind11::module_ m)
         py::arg("num_rings")=1
      )
   ;
+
+  py::enum_<MongeFitter::FittingBasisType>(mjf_class, "FittingBasisType")
+    .value("PCA", MongeFitter::FittingBasisType::PCA)
+    .value("VERTEX_NORMAL", MongeFitter::FittingBasisType::VERTEX_NORMAL)
+    .value("RING_NORMAL_MEAN", MongeFitter::FittingBasisType::RING_NORMAL_MEAN)
+    .value("RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN", MongeFitter::FittingBasisType::RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN)
+    .value("RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN_SIGMA", MongeFitter::FittingBasisType::RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN_SIGMA)
+    .export_values();
 }
 
 }
