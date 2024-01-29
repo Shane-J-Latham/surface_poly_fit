@@ -422,6 +422,7 @@ public:
       std::size_t num_rings,
       std::vector<Point_3> & in_points,
       std::vector<Vector_3> & in_normals,
+      std::vector<std::int32_t> & in_ring,
       Vertex_PM_type & vpm
   )
   {
@@ -430,17 +431,24 @@ public:
     //initialize
     in_points.clear();
     in_normals.clear();
+    in_ring.clear();
 
-    Poly_rings::collect_i_rings(v, num_rings, gathered, vpm);
+    Poly_rings::collect_i_rings(v, num_rings, gathered, vpm, false);
 
     //store the gathered points
+    in_points.reserve(gathered.size());
+    in_normals.reserve(gathered.size());
+    in_ring.reserve(gathered.size());
     std::vector<Vertex*>::iterator
       itb = gathered.begin(), ite = gathered.end();
-    for (; itb != ite; ++itb)
+    CGAL_For_all(itb, ite)
     {
       in_points.push_back((*itb)->point());
       in_normals.push_back((*itb)->normal);
+      in_ring.push_back(vpm[*itb]);
     }
+    Poly_rings::reset_ring_indices(gathered, vpm);
+
   }
 
   PolyhedralSurfacePtr create_ring_patch(

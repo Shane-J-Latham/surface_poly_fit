@@ -23,10 +23,6 @@ protected:
 //   typedef typename boost::property_traits<VertexPropertyMap>::value_type vpm_value_type;
 //   typedef typename boost::property_traits<VertexPropertyMap>::key_type vpm_key_type;
 
-  //vertex indices are initialised to -1
-  static void reset_ring_indices(std::vector < Vertex * >&vces,
-                                 VertexPropertyMap& vpm);
-
   //i >= 1; from a start vertex on the current i-1 ring, push non-visited neighbors
   //of start in the nextRing and set indices to i. Also add these vertices in all.
   static void push_neighbors_of(Vertex * start, int ith,
@@ -43,12 +39,17 @@ protected:
                         VertexPropertyMap& vpm);
 
  public:
+  //vertex indices are initialised to -1
+  static void reset_ring_indices(std::vector < Vertex * >&vces,
+                                 VertexPropertyMap& vpm);
+
   //collect i>=1 rings : all neighbors up to the ith ring,
   static void
     collect_i_rings(Vertex* v,
                     int ring_i,
                     std::vector < Vertex * >& all,
-                    VertexPropertyMap& vpm);
+                    VertexPropertyMap& vpm,
+                    const bool reset_vpm=true);
 
   //collect enough rings (at least 1), to get at least min_nb of neighbors
   static void
@@ -110,7 +111,8 @@ template <class TPoly, class VertexPropertyMap>
 collect_i_rings(Vertex* v,
                 int ring_i,
                 std::vector < Vertex * >& all,
-                VertexPropertyMap& vpm)
+                VertexPropertyMap& vpm,
+                const bool reset_vpm)
 {
   std::vector<Vertex*> current_ring, next_ring;
   std::vector<Vertex*> *p_current_ring, *p_next_ring;
@@ -130,7 +132,10 @@ collect_i_rings(Vertex* v,
       std::swap(p_current_ring, p_next_ring);
     }
   //clean up
-  reset_ring_indices(all, vpm);
+  if (reset_vpm)
+  {
+    reset_ring_indices(all, vpm);
+  }
 }
 
 template <class TPoly, class VertexPropertyMap>
