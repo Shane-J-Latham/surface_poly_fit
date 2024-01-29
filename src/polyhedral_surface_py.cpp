@@ -239,20 +239,17 @@ py::object PolyhedralSurfacePy::get_face_normals()
   return py::object(ary);
 }
 
-py::object PolyhedralSurfacePy::create_ring_patch(
+PolyhedralSurfacePy::PolyhedralSurfacePyPtr PolyhedralSurfacePy::create_ring_patch(
     const std::int64_t vertex_index,
     const std::int64_t num_rings
 )
 {
-  py::object ret_obj;
-
   PolyhedralSurface::PolyhedralSurfacePtr ps_ptr = this->surface_->create_ring_patch(vertex_index, num_rings);
 
-  PolyhedralSurfacePy ret_psp;
-  ret_psp.surface_.swap(ps_ptr);
-  ret_obj = py::cast(ret_psp);
+  PolyhedralSurfacePyPtr ret_psp_ptr = std::make_unique<PolyhedralSurfacePy>();
+  ret_psp_ptr->surface_.swap(ps_ptr);
 
-  return ret_obj;
+  return ret_psp_ptr;
 }
 
 

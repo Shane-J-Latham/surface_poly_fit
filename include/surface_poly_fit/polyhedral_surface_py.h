@@ -15,6 +15,7 @@ class PolyhedralSurfacePy
 {
 public:
   typedef std::unique_ptr<PolyhedralSurface> PolyhedralSurfacePtr;
+  typedef std::unique_ptr<PolyhedralSurfacePy> PolyhedralSurfacePyPtr;
 
   PolyhedralSurfacePy();
 
@@ -34,7 +35,7 @@ public:
 
   py::object get_face_normals();
 
-  py::object create_ring_patch(const std::int64_t vertex_index, const std::int64_t num_rings);
+  PolyhedralSurfacePyPtr create_ring_patch(const std::int64_t vertex_index, const std::int64_t num_rings);
 
   PolyhedralSurfacePtr surface_;
 };
