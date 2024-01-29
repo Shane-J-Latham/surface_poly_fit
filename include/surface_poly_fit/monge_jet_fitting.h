@@ -19,9 +19,55 @@ public:
   typedef TLocalFloatType LocalFloatType;
   typedef CGAL::Simple_cartesian<TLocalFloatType> LocalKernel;
   typedef typename TPoly::Traits::Kernel DataKernel;
-  typedef CGAL::Monge_via_jet_fitting<DataKernel, LocalKernel> MongeViaJetFitting;
   typedef typename LocalKernel::Vector_3 Vector_3;
   typedef Eigen::Matrix<typename LocalKernel::FT, 3, 3> Matrix_3x3;
+
+  class MongeViaJetFitting: public CGAL::Monge_via_jet_fitting<DataKernel, LocalKernel>
+  {
+  public:
+    typedef CGAL::Monge_via_jet_fitting<DataKernel, LocalKernel> Inherited;
+    typedef typename Inherited::Monge_form Monge_form;
+    typedef typename Inherited::LAMatrix LAMatrix;
+    typedef typename Inherited::LAVector LAVector;
+
+    template <class InputIterator>
+    Monge_form operator()(
+        InputIterator begin,
+        InputIterator end,
+        std::size_t d,
+        std::size_t dprime,
+        const bool doPCA=true
+    )
+    {
+      // precondition: on the degrees, jet and monge
+      CGAL_precondition( (d >=1) && (dprime >= 1)
+                         && (dprime <= 4) && (dprime <= d) );
+      this->deg = static_cast<int>(d);
+      this->deg_monge = static_cast<int>(dprime);
+      this->nb_d_jet_coeff = static_cast<int>((d+1)*(d+2)/2);
+      this->nb_input_pts = static_cast<int>(end - begin);
+      // precondition: solvable ls system
+      CGAL_precondition( this->nb_input_pts >= this->nb_d_jet_coeff );
+
+      //Initialize
+      Monge_form monge_form;
+      monge_form.set_up(dprime);
+      //for the system MA=Z
+      LAMatrix M(this->nb_input_pts, this->nb_d_jet_coeff);
+      LAVector Z(this->nb_input_pts);
+
+      if (doPCA)
+      {
+        this->compute_PCA(begin, end);
+      }
+      this->fill_matrix(begin, end, d, M, Z);//with precond
+      this->solve_linear_system(M, Z);  //correct with precond
+      this->compute_Monge_basis(Z.vector(), monge_form);
+      if ( dprime >= 3) this->compute_Monge_coefficients(Z.vector(), dprime, monge_form);
+      return monge_form;
+    }
+
+  };
 
   struct MongeForm: public MongeViaJetFitting::Monge_form
   {
@@ -82,7 +128,13 @@ public:
   )
   {
     auto vtx_it = poly_surface.vertices_begin() + vertex_index;
-    poly_surface.gather_fitting_points(&(*vtx_it), num_rings,  this->in_points_, poly_surface.vertex_prop_map_);
+    poly_surface.gather_fitting_points(
+        &(*vtx_it),
+        num_rings,
+        this->in_points_,
+        this->in_normals_,
+        poly_surface.vertex_prop_map_
+    );
 
     MongeForm monge_form;
     MongeViaJetFitting monge_fit;
@@ -94,7 +146,8 @@ public:
                   this->in_points_.begin(),
                   this->in_points_.end(),
                   this->degree_poly_fit_,
-                  this->degree_monge_
+                  this->degree_monge_,
+                  true
               )
           );
       monge_form.comply_wrt_given_normal(vtx_it->normal);
@@ -116,6 +169,7 @@ public:
   }
 
   std::vector<Point_3> in_points_;  //container for data points
+  std::vector<Vector_3> in_normals_;  //container for data point normals
   std::size_t degree_poly_fit_;
   std::size_t degree_monge_;
 };
