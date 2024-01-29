@@ -301,6 +301,7 @@ public:
         auto orig_vtx_handle = this->vertices_[i];
         auto new_vertex_handle = bldr.add_vertex(orig_vtx_handle->point());
         new_vertex_handle->index = i;
+        new_vertex_handle->normal = orig_vtx_handle->normal;
       }
     }
 
@@ -392,20 +393,27 @@ public:
     }
   }
 
-  void update_vertex_and_face_normals()
+  void update_face_normals()
   {
     CGAL::Polygon_mesh_processing::compute_face_normals(
       *(dynamic_cast<Polyhedron *>(this)),
       this->facet_prop_map_
     );
-
-    this->update_vertex_normals();
   }
 
-  void update()
+  void update_vertex_and_face_normals(const bool updateVertexNormals=true)
+  {
+    this->update_face_normals();
+    if (updateVertexNormals)
+    {
+      this->update_vertex_normals();
+    }
+  }
+
+  void update(const bool updateVertexNormals=true)
   {
     this->update_edge_lengths();
-    this->update_vertex_and_face_normals();
+    this->update_vertex_and_face_normals(updateVertexNormals);
     this->reset_vertex_prop_map();
   }
 
@@ -441,7 +449,8 @@ public:
     PolyhedralPatchBuilder<HalfedgeDS> bldr(gathered);
     PolyhedralSurfacePtr polyPatchPtr = std::make_unique<PolyhedralSurface>();
     polyPatchPtr->delegate(bldr);
-    polyPatchPtr->update();
+    const bool updateVertexNormals = false;
+    polyPatchPtr->update(updateVertexNormals);
 
     return polyPatchPtr;
   }
