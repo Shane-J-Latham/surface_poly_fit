@@ -33,8 +33,8 @@ class SurfacePolyFitTest(_unittest.TestCase):
         import trimesh
         from trimesh.exchange.export import export_mesh
 
-        self.logger.info("vertices=%s", poly_surface.get_vertices())
-        self.logger.info("faces=%s", poly_surface.get_faces())
+        self.logger.debug("vertices=%s", poly_surface.get_vertices())
+        self.logger.debug("faces=%s", poly_surface.get_faces())
         mesh = \
             trimesh.Trimesh(
                 vertices=poly_surface.get_vertices(),
@@ -158,6 +158,15 @@ class PolyhedralSurfaceTest(SurfacePolyFitTest):
         self.assertEqual(21, patch_surface.num_vertices)
         self.assertEqual(28, patch_surface.num_faces)
 
+        patch_surface = poly_surface.create_ring_patch(origin_vertex_index, 3)
+        # self.export_mesh("monge_surface_patch_ring3.ply", patch_surface)
+        self.assertEqual(45, patch_surface.num_vertices)
+        self.assertEqual(68, patch_surface.num_faces)
+
+        patch_surface = poly_surface.create_ring_patch(origin_vertex_index, 4)
+        # self.export_mesh("monge_surface_patch_ring4.ply", patch_surface)
+        self.assertEqual(77, patch_surface.num_vertices)
+        self.assertEqual(124, patch_surface.num_faces)
 
 class MongePolynomial:
     def __init__(self, k, b, c):

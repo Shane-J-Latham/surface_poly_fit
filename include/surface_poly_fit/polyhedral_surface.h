@@ -237,29 +237,63 @@ public:
 
   void operator()(HalfedgeDS & hds)
   {
-    VertexIndexToNewIndexMap vtxIdxToNewIdxMap;
-
     const std::int64_t num_vertices = this->vertices_.size();
 
+    std::vector<std::vector<std::int64_t> > faces;
     // Calculate the number of faces.
-    FacetHandleSet facetHdlSet;
-    for (std::int64_t i = 0; i < num_vertices; ++i)
+
     {
-      auto orig_vtx_handle = this->vertices_[i];
-      auto he_it = orig_vtx_handle->vertex_begin();
-      do
+      VertexIndexToNewIndexMap vtxIdxToNewIdxMap;
+
+      // initialise the vtxIdxToNewIdxMap.
+      for (std::int64_t i = 0; i < num_vertices; ++i)
       {
-        auto facetHdl = he_it->facet();
-        facetHdlSet.insert(facetHdl);
-      } while (++he_it != orig_vtx_handle->vertex_begin());
+        auto orig_vtx_handle = this->vertices_[i];
+        vtxIdxToNewIdxMap[orig_vtx_handle->index] = i;
+      }
+
+      // Work out the faces.
+      FacetHandleSet facetHdlSet;
+      std::vector<std::int64_t> vertex_indices;
+
+      for (std::int64_t i = 0; i < num_vertices; ++i)
+      {
+        auto orig_vtx_handle = this->vertices_[i];
+        auto he_it = orig_vtx_handle->vertex_begin();
+        do
+        {
+          auto facetHdl = he_it->facet();
+          if (facetHdlSet.find(facetHdl) == facetHdlSet.end())
+          {
+            facetHdlSet.insert(facetHdl);
+            auto fct_he_it = facetHdl->facet_begin();
+            vertex_indices.clear();
+            do
+            {
+              auto new_vtx_idx_it = vtxIdxToNewIdxMap.find(fct_he_it->vertex()->index);
+              if (new_vtx_idx_it != vtxIdxToNewIdxMap.end())
+              {
+                vertex_indices.push_back(new_vtx_idx_it->second);
+              }
+              else
+              {
+                break;
+              }
+            }
+            while (++fct_he_it != facetHdl->facet_begin());
+
+            if (facetHdl->facet_degree() == vertex_indices.size())
+            {
+              faces.push_back(vertex_indices);
+            }
+          }
+        } while (++he_it != orig_vtx_handle->vertex_begin());
+      }
     }
-    const std::int64_t num_faces = facetHdlSet.size();
-    facetHdlSet.clear();
 
     Builder bldr(hds, true);
 
-    bldr.begin_surface(num_vertices, num_faces, 0, Builder::ABSOLUTE_INDEXING);
-
+    bldr.begin_surface(num_vertices, faces.size(), 0, Builder::ABSOLUTE_INDEXING);
     {
       // Add vertices.
       for (std::int64_t i = 0; i < num_vertices; ++i)
@@ -267,47 +301,14 @@ public:
         auto orig_vtx_handle = this->vertices_[i];
         auto new_vertex_handle = bldr.add_vertex(orig_vtx_handle->point());
         new_vertex_handle->index = i;
-        vtxIdxToNewIdxMap[orig_vtx_handle->index] = new_vertex_handle->index;
       }
     }
 
     // Add facets.
-    facetHdlSet.clear();
-    for (std::int64_t i = 0; i < num_vertices; ++i)
+    for (auto face_it = faces.begin(); face_it != faces.end(); ++face_it)
     {
-      auto orig_vtx_handle = this->vertices_[i];
-      auto he_it = orig_vtx_handle->vertex_begin();
-      std::vector<std::int64_t> vertex_indices;
-      do
-      {
-        auto facetHdl = he_it->facet();
-        if (facetHdlSet.find(facetHdl) == facetHdlSet.end())
-        {
-          facetHdlSet.insert(facetHdl);
-          auto fct_he_it = facetHdl->facet_begin();
-          vertex_indices.clear();
-          do
-          {
-            auto new_vtx_idx_it = vtxIdxToNewIdxMap.find(fct_he_it->vertex()->index);
-            if (new_vtx_idx_it != vtxIdxToNewIdxMap.end())
-            {
-              vertex_indices.push_back(new_vtx_idx_it->second);
-            }
-            else
-            {
-              break;
-            }
-          }
-          while (++fct_he_it != facetHdl->facet_begin());
-
-          if (facetHdl->facet_degree() == vertex_indices.size())
-          {
-            bldr.add_facet(vertex_indices.begin(), vertex_indices.end());
-          }
-        }
-      } while (++he_it != orig_vtx_handle->vertex_begin());
+      bldr.add_facet(face_it->begin(), face_it->end());
     }
-
     bldr.end_surface();
   }
 
