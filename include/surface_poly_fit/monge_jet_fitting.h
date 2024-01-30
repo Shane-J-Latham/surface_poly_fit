@@ -44,7 +44,7 @@ public:
       num_rings_(-1),
       poly_fit_condition_number_(0.0),
       pca_eigenvalues_(0.0, 0.0, 0.0),
-      pca_eigenvectors_(Matrix_3x3::Zero())
+      fitting_basis_(Matrix_3x3::Zero())
     {
       this->m_origin_pt = typename Inherited::Point_3(0.0, 0.0, 0.0);
       this->m_d1 = typename Inherited::Vector_3(0.0, 0.0, 0.0);
@@ -59,7 +59,7 @@ public:
       num_rings_(-1),
       poly_fit_condition_number_(0.0),
       pca_eigenvalues_(0.0, 0.0, 0.0),
-      pca_eigenvectors_(Matrix_3x3::Zero())
+      fitting_basis_(Matrix_3x3::Zero())
     {
     }
 
@@ -70,7 +70,7 @@ public:
     std::int64_t num_fitting_points_;
     LocalFloatType poly_fit_condition_number_;
     Vector_3 pca_eigenvalues_;
-    Matrix_3x3 pca_eigenvectors_;
+    Matrix_3x3 fitting_basis_;
   };
 
   class MongeViaJetFitting: public CGAL::Monge_via_jet_fitting<DataKernel, LocalKernel>
@@ -84,9 +84,31 @@ public:
     typedef typename Inherited::Vector_3 Vector_3;
     typedef typename Inherited::Aff_transformation Aff_transformation;
 
-    template <class InputIterator>
-    std::pair<Matrix_3x3, Matrix_3x1> calculate_PCA_basis(InputIterator begin, InputIterator end) const
+    static
+    void switch_to_direct_orientation(
+      Vector_3 & v1,
+      Vector_3 const & v2,
+      Vector_3 const & v3)
     {
+      if (CGAL::orientation (v1, v2, v3) == CGAL::NEGATIVE)
+        v1 = -v1;
+    }
+
+    static
+    void switch_to_direct_orientation(
+      Matrix_3x1 & v1,
+      Matrix_3x1 const & v2,
+      Matrix_3x1 const & v3)
+    {
+      if (CGAL::orientation (v1, v2, v3) == CGAL::NEGATIVE)
+        v1 = -v1;
+    }
+
+    template <class InputIterator>
+    static
+    std::pair<Matrix_3x3, Matrix_3x1> calculate_PCA_basis(InputIterator begin, InputIterator end)
+    {
+      CGAL::Cartesian_converter<DataKernel, LocalKernel> D2L_converter;
       int n = std::distance(begin, end);
       typename LocalKernel::FT x, y, z,
         sumX = 0., sumY = 0., sumZ = 0.,
@@ -134,35 +156,34 @@ public:
         (covariance, eigen_values, eigen_vectors);
 
       //store in evals
-      Matrix_3x1 evals;
-      for (int i=0; i<3; i++)
-      {
-        evals(i) =  eigen_values[2-i];
-      }
+      Matrix_3x1 evals(eigen_values[2], eigen_values[1], eigen_values[0]);
 
       Vector_3 v1(eigen_vectors[6],eigen_vectors[7],eigen_vectors[8]);
       Vector_3 v2(eigen_vectors[3],eigen_vectors[4],eigen_vectors[5]);
       Vector_3 v3(eigen_vectors[0],eigen_vectors[1],eigen_vectors[2]);
-      this->switch_to_direct_orientation(v1, v2, v3);
+      switch_to_direct_orientation(v1, v2, v3);
 
-      return
-          std::make_pair(
-            Matrix_3x3(
-                v1[0], v2[0], v3[0],
-                v1[1], v2[1], v3[1],
-                v1[2], v2[2], v3[2]
-            ),
-            evals
-          );
+      Matrix_3x3 R;
+      R <<
+        v1[0], v2[0], v3[0],
+        v1[1], v2[1], v3[1],
+        v1[2], v2[2], v3[2]
+        ;
+
+      return std::make_pair(R, evals);
     }
 
-    Matrix_3x3 calc_rotation_matrix_from_normal(Vector_3 const & normal) const
+    static
+    Matrix_3x3 calc_rotation_matrix_from_normal(Vector_3 const & normal)
     {
-      const Matrix_3x1 z_dir(0.0, 0.0, 0.0);
+      const Matrix_3x1 z_dir(0.0, 0.0, 1.0);
       const Matrix_3x1 nrml_dir(normal[0], normal[1], normal[2]);
       Matrix_3x3 R;
       R = Quaternion().setFromTwoVectors(z_dir, nrml_dir).toRotationMatrix();
 
+      std::cout
+        << "nrml_dir = " << nrml_dir << std::endl
+        << "R = " << R << std::endl;
       return R;
     }
 
@@ -191,7 +212,7 @@ public:
         InputIterator end,
         std::size_t d,
         std::size_t dprime,
-        const bool doPCA=true
+        Matrix_3x3 const & fitting_basis
     )
     {
       // precondition: on the degrees, jet and monge
@@ -211,10 +232,8 @@ public:
       LAMatrix M(this->nb_input_pts, this->nb_d_jet_coeff);
       LAVector Z(this->nb_input_pts);
 
-      if (doPCA)
-      {
-        this->compute_PCA(begin, end);
-      }
+      this->set_world_to_fitting_from_rotation(fitting_basis);
+
       this->fill_matrix(begin, end, d, M, Z);//with precond
       this->solve_linear_system(M, Z);  //correct with precond
       this->compute_Monge_basis(Z.vector(), monge_form);
@@ -222,41 +241,26 @@ public:
 
       MongeForm ret_monge_form(monge_form);
       ret_monge_form.poly_fit_condition_number_ = this->condition_number();
-      if (doPCA)
-      {
-        ret_monge_form.pca_eigenvalues_ =
-            Vector_3(
-                this->pca_basis(0).first,
-                this->pca_basis(1).first,
-                this->pca_basis(2).first
-            );
-      }
 
       return ret_monge_form;
-    }
-
-    template <class InputIterator>
-    MongeForm operator()(
-        InputIterator begin,
-        InputIterator end,
-        std::size_t d,
-        std::size_t dprime,
-        Vector_3 const & fit_normal
-    )
-    {
-      this->set_world_to_fitting_from_normal(fit_normal);
-      return (*this)(begin, end, d, dprime, false);
     }
 
   };
 
 
   MongeJetFitter(const std::size_t degree_poly_fit=2, const std::size_t degree_monge=2) :
+    num_rings_(0),
     in_points_(),
     in_normals_(),
     in_ring_(),
     degree_poly_fit_(degree_poly_fit),
-    degree_monge_(degree_monge)
+    degree_monge_(degree_monge),
+    pca_eigenvals_(
+        std::numeric_limits<typename LocalKernel::FT>::quiet_NaN(),
+        std::numeric_limits<typename LocalKernel::FT>::quiet_NaN(),
+        std::numeric_limits<typename LocalKernel::FT>::quiet_NaN()
+    ),
+    ring_normal_gaussian_sigma_(1.6)
   {
   }
 
@@ -268,7 +272,8 @@ public:
   void set_monge_form_data(
       MongeForm & mf,
       const std::int64_t vertex_index,
-      const std::int64_t num_rings
+      const std::int64_t num_rings,
+      Matrix_3x3 const & fitting_basis
   )
   {
     mf.vertex_index_ = vertex_index;
@@ -276,6 +281,8 @@ public:
     mf.degree_poly_fit_ = this->degree_poly_fit_;
     mf.num_rings_ = num_rings;
     mf.num_fitting_points_ = this->in_points_.size();
+    mf.pca_eigenvalues_ = this->pca_eigenvals_;
+    mf.fitting_basis_ = fitting_basis;
   }
 
   void gather_fitting_points(
@@ -295,16 +302,116 @@ public:
     );
   }
 
+  Matrix_3x3 calculate_fit_basis(FittingBasisType const & fit_basis_type)
+  {
+    typedef typename LocalKernel::FT FT;
+    Matrix_3x3 R;
+    switch (fit_basis_type)
+    {
+    case PCA:
+    {
+      auto R_evals_pair = MongeViaJetFitting::calculate_PCA_basis(this->in_points_.begin(), this->in_points_.end());
+      R = R_evals_pair.first;
+      this->pca_eigenvals_ =
+        Vector_3(
+          R_evals_pair.second[0],
+          R_evals_pair.second[1],
+          R_evals_pair.second[2]
+        );
+      break;
+    }
+    case VERTEX_NORMAL:
+    {
+      R = MongeViaJetFitting::calc_rotation_matrix_from_normal(*(this->in_normals_.begin()));
+      break;
+    }
+    case RING_NORMAL_MEAN:
+    {
+      Vector_3 dir(0.0, 0.0, 0.0);
+      for (auto it = this->in_normals_.begin(); it != this->in_normals_.end(); ++it)
+      {
+        dir += *it;
+      }
+      dir /= FT(this->in_normals_.size());
+      R = MongeViaJetFitting::calc_rotation_matrix_from_normal(dir);
+      break;
+    }
+    case RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN:
+    {
+      Vector_3 dir(0.0, 0.0, 0.0);
+      FT weight_sum = 0.0;
+      FT const sigma = FT(this->num_rings_) / 3.0;
+      FT const sigma_sqrd = sigma * sigma;
+      auto rit = this->in_ring_.begin();
+      for (auto nit = this->in_normals_.begin(); nit != this->in_normals_.end(); ++nit, ++rit)
+      {
+        FT const r = FT(*rit);
+        FT const weight = std::exp(-r*r / sigma_sqrd);
+        weight_sum += weight;
+        dir += weight * (*nit);
+      }
+      dir /= weight_sum;
+      R = MongeViaJetFitting::calc_rotation_matrix_from_normal(dir);
+      break;
+    }
+    case RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN_SIGMA:
+    {
+      Vector_3 dir(0.0, 0.0, 0.0);
+      FT weight_sum = 0.0;
+      FT const sigma = this->ring_normal_gaussian_sigma_;
+      FT const sigma_sqrd = sigma * sigma;
+      auto rit = this->in_ring_.begin();
+      for (auto nit = this->in_normals_.begin(); nit != this->in_normals_.end(); ++nit, ++rit)
+      {
+        FT const r = FT(*rit);
+        FT const weight = std::exp(-r*r / sigma_sqrd);
+        weight_sum += weight;
+        dir += weight * (*nit);
+      }
+      dir /= weight_sum;
+      R = MongeViaJetFitting::calc_rotation_matrix_from_normal(dir);
+      break;
+    }
+
+    default:
+    {
+      std::stringstream msg;
+      msg << "Unhandled fit_basis_type=" << int(fit_basis_type);
+      throw std::runtime_error(msg.str());
+      break;
+    }
+    }
+
+    return R;
+  }
+
   MongeForm fit_at_vertex(
       PolySurf & poly_surface,
       const std::int64_t vertex_index,
-      const std::int64_t num_rings
+      const std::int64_t num_rings,
+      FittingBasisType const & fit_basis_type
   )
   {
+    this->num_rings_ = num_rings;
+    this->pca_eigenvals_ =
+      Vector_3(
+        std::numeric_limits<typename LocalKernel::FT>::quiet_NaN(),
+        std::numeric_limits<typename LocalKernel::FT>::quiet_NaN(),
+        std::numeric_limits<typename LocalKernel::FT>::quiet_NaN()
+      );
     this->gather_fitting_points(poly_surface, vertex_index, num_rings);
+    Matrix_3x3 const fit_basis = this->calculate_fit_basis(fit_basis_type);
+    MongeForm monge_form = this->fit_at_vertex(fit_basis);
+    this->set_monge_form_data(monge_form, vertex_index, num_rings, fit_basis);
+    return monge_form;
+  }
 
-    MongeForm monge_form;
+  MongeForm fit_at_vertex(
+      Matrix_3x3 const & fit_basis
+  )
+  {
     MongeViaJetFitting monge_fit;
+    MongeForm monge_form;
     if (this->in_points_.size() >= this->get_min_num_fit_points())
     {
       monge_form =
@@ -313,20 +420,22 @@ public:
           this->in_points_.end(),
           this->degree_poly_fit_,
           this->degree_monge_,
-          true
+          fit_basis
         );
       monge_form.comply_wrt_given_normal(this->in_normals_[0]);
     }
-    this->set_monge_form_data(monge_form, vertex_index, num_rings);
 
     return monge_form;
   }
 
+  std::int64_t num_rings_; // number of vertex neightbourhood rings
   std::vector<Point_3> in_points_;  //container for data points
   std::vector<Vector_3> in_normals_;  //container for data point normals
   std::vector<std::int32_t> in_ring_;  //container for point ring-number
-  std::size_t degree_poly_fit_;
-  std::size_t degree_monge_;
+  std::size_t degree_poly_fit_; // Degree of the fitting polynomial
+  std::size_t degree_monge_; // Degree of the Monge polynomial
+  Vector_3 pca_eigenvals_; // Degree of the Monge polynomial
+  typename LocalKernel::FT ring_normal_gaussian_sigma_;
 };
 
 }

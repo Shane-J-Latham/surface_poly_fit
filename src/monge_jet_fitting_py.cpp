@@ -44,6 +44,14 @@ struct MongeFormNumpy
 
     for (std::size_t i = 0; i < 3; ++i)
     {
+      for (std::size_t j = 0; j < 3; ++j)
+      {
+        this->poly_fit_basis[i][j] = mf.fitting_basis_(i, j);
+      }
+    }
+
+    for (std::size_t i = 0; i < 3; ++i)
+    {
       this->origin[i] = mf.origin()[i];
     }
     for (std::size_t i = 0; i < 3; ++i)
@@ -107,6 +115,7 @@ struct MongeFormNumpy
   std::int64_t num_fitting_points;
   double poly_fit_condition_number;
   Array3 pca_eigenvalues;
+  Array3x3 poly_fit_basis;
   Array3 origin;
   Array3x3 direction;
   Array2 k;
@@ -141,6 +150,16 @@ public:
     return std::int64_t(this->monge_fitter_.get_min_num_fit_points());
   }
 
+  double get_ring_normal_gaussian_sigma() const
+  {
+    return this->monge_fitter_.ring_normal_gaussian_sigma_;
+  }
+
+  void set_ring_normal_gaussian_sigma(const double sigma)
+  {
+    this->monge_fitter_.ring_normal_gaussian_sigma_ = sigma;
+  }
+
   py::object monge_form_to_array(MongeForm const & monge_form, const std::int64_t degree_monge) const
   {
     std::size_t const shape[1] = {1};
@@ -154,13 +173,14 @@ public:
     return py::object(ary);
   }
 
-  py::object fit_at_vertex(std::int64_t vertex_index, std::int64_t num_rings)
+  py::object fit_at_vertex(std::int64_t vertex_index, std::int64_t num_rings, MongeFitter::FittingBasisType fit_basis_type)
   {
     MongeForm mf_result =
         this->monge_fitter_.fit_at_vertex(
             *(py::cast<PolyhedralSurfacePy &>(this->poly_surface_obj_).surface_),
             vertex_index,
-            num_rings
+            num_rings,
+            fit_basis_type
         );
 
     return this->monge_form_to_array(mf_result, this->monge_fitter_.degree_monge_);
@@ -184,6 +204,7 @@ void export_monge_jet_fitter(pybind11::module_ m)
       num_fitting_points,
       poly_fit_condition_number,
       pca_eigenvalues,
+      poly_fit_basis,
       origin,
       direction,
       k,
@@ -192,6 +213,14 @@ void export_monge_jet_fitter(pybind11::module_ m)
   );
 
   py::class_<MongeJetFitterPy> mjf_class(m, "MongeJetFitter");
+
+  py::enum_<MongeFitter::FittingBasisType>(mjf_class, "FittingBasisType")
+    .value("PCA", MongeFitter::FittingBasisType::PCA)
+    .value("VERTEX_NORMAL", MongeFitter::FittingBasisType::VERTEX_NORMAL)
+    .value("RING_NORMAL_MEAN", MongeFitter::FittingBasisType::RING_NORMAL_MEAN)
+    .value("RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN", MongeFitter::FittingBasisType::RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN)
+    .value("RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN_SIGMA", MongeFitter::FittingBasisType::RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN_SIGMA)
+    .export_values();
 
   mjf_class
     .def(
@@ -203,21 +232,20 @@ void export_monge_jet_fitter(pybind11::module_ m)
     .def_property_readonly("degree_poly_fit", &MongeJetFitterPy::get_degree_poly_fit)
     .def_property_readonly("degree_monge", &MongeJetFitterPy::get_degree_monge)
     .def_property_readonly("min_num_fit_points", &MongeJetFitterPy::get_min_num_fit_points)
+    .def_property(
+      "ring_normal_gaussian_sigma",
+      &MongeJetFitterPy::get_ring_normal_gaussian_sigma,
+      &MongeJetFitterPy::set_ring_normal_gaussian_sigma
+    )
     .def(
         "fit_at_vertex",
         &MongeJetFitterPy::fit_at_vertex,
         py::arg("vertex_index"),
-        py::arg("num_rings")=1
+        py::arg("num_rings")=1,
+        py::arg("fit_basis_type")=MongeFitter::FittingBasisType::VERTEX_NORMAL
      )
   ;
 
-  py::enum_<MongeFitter::FittingBasisType>(mjf_class, "FittingBasisType")
-    .value("PCA", MongeFitter::FittingBasisType::PCA)
-    .value("VERTEX_NORMAL", MongeFitter::FittingBasisType::VERTEX_NORMAL)
-    .value("RING_NORMAL_MEAN", MongeFitter::FittingBasisType::RING_NORMAL_MEAN)
-    .value("RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN", MongeFitter::FittingBasisType::RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN)
-    .value("RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN_SIGMA", MongeFitter::FittingBasisType::RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN_SIGMA)
-    .export_values();
 }
 
 }
