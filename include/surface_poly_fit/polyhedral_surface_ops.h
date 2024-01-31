@@ -134,20 +134,18 @@ compute_vertex_average_unit_normal(Vertex * v, const FacetPropertyMap& fpm)
   Halfedge_around_vertex_circulator hedgeb = v->vertex_begin(), hedgee = hedgeb;
   std::size_t count = 0;
   do{
-    if (hedgeb->is_border_edge()){
-      hedgeb++;
-      continue;
-    }
+    // if (hedgeb->is_border_edge()){
+    //   hedgeb++;
+    //   continue;
+    // }
 
     f = hedgeb->facet();
     n = get(fpm, f);
     sum = (sum + n);
-    hedgeb++;
     ++count;
   }
-  while (hedgeb != hedgee);
-  // sum = sum / std::sqrt(sum * sum);
-  sum = sum / count;
+  while (++hedgeb != hedgee);
+  sum = sum / std::sqrt(sum * sum);
   return sum;
 }
 

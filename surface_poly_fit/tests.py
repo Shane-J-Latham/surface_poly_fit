@@ -180,6 +180,26 @@ class PolyhedralSurfaceTest(SurfacePolyFitTest):
         self.assertEqual(77, patch_surface.num_vertices)
         self.assertEqual(124, patch_surface.num_faces)
 
+    def test_vertex_normals(self):
+        # import trimesh
+        poly_surface = create_monge_surface()
+        self.export_mesh("monge_poly_surface.ply", poly_surface)
+        poly_surface_nrmls = poly_surface.get_vertex_normals()
+        for nrml in poly_surface_nrmls:
+            self.logger.debug("nrml=%s", nrml.tolist())
+            self.assertTrue(_np.all(~_np.isnan(nrml)))
+            self.assertAlmostEqual(1.0, _np.linalg.norm(nrml))
+
+    def test_face_normals(self):
+        # import trimesh
+        poly_surface = create_monge_surface()
+        self.export_mesh("monge_poly_surface.ply", poly_surface)
+        poly_surface_nrmls = poly_surface.get_face_normals()
+        for nrml in poly_surface_nrmls:
+            self.logger.debug("nrml=%s", nrml.tolist())
+            self.assertTrue(_np.all(~_np.isnan(nrml)))
+            self.assertAlmostEqual(1.0, _np.linalg.norm(nrml))
+
 
 class MongePolynomial:
     def __init__(self, k, b, c):
@@ -286,6 +306,8 @@ class MongeJetFitterTest(SurfacePolyFitTest):
         self.assertEqual(4, fitter.degree_poly_fit)
         self.assertEqual(2, fitter.degree_monge)
         self.assertEqual(15, fitter.min_num_fit_points)
+        fitter.ring_normal_gaussian_sigma = 4.0
+        self.assertEqual(4.0, fitter.ring_normal_gaussian_sigma)
 
     def test_fit(self):
         # import trimesh
@@ -306,7 +328,7 @@ class MongeJetFitterTest(SurfacePolyFitTest):
         )
         # tmesh = \
         #    trimesh.Trimesh(vertices=poly_surface.get_vertices(), faces=poly_surface.get_faces())
-        # trimesh.exchange.export.export_mesh(tmesh, "monge_poly_surface.ply")
+        # self.export_mesh("monge_poly_surface.ply", poly_surface)
 
         monge_origin_vertex_index = poly_surface.num_vertices // 2
         self.assertTrue(
@@ -331,6 +353,13 @@ class MongeJetFitterTest(SurfacePolyFitTest):
         self.assertTrue(
             _np.allclose(_np.identity(3, dtype=_np.float64), _np.absolute(result["direction"][0]))
         )
+        self.assertTrue(
+            _np.allclose(
+                _np.identity(3, dtype=_np.float64),
+                _np.absolute(result["poly_fit_basis"][0])
+            )
+        )
+
         if degree_monge < 3:
             self.assertTrue(
                 _np.all(result["b"][0] == 0.0)
@@ -340,9 +369,100 @@ class MongeJetFitterTest(SurfacePolyFitTest):
                 _np.all(result["c"][0] == 0.0)
             )
 
+    def test_oriented_fit(self):
+        import trimesh
+        from scipy.spatial.transform import Rotation
+        from surface_poly_fit._spf_cgal import MongeJetFitter, PolyhedralSurface
+
+        monge_polynomial = \
+            MongePolynomial(
+                k=(0.50, 0.25),
+                b=(0.0, 0.0, 0.0, 0.0),
+                c=(0.0, 0.0, 0.0, 0.0, 0.0)
+            )
+        poly_surface = create_monge_surface(monge_polynomial)
+        ax = _np.asarray((1.0, 2.0, 0.25))
+        ax /= _np.linalg.norm(ax)
+        R = Rotation.from_rotvec(ax * 55, degrees=True).as_matrix()
+        t = (2.0, 4.0, 8.0)
+        M = _np.identity(4, dtype=_np.float64)
+        M[:3, :3] = R
+        M[:3, 3] = t
+        tmesh = \
+            trimesh.Trimesh(vertices=poly_surface.get_vertices(), faces=poly_surface.get_faces())
+        tmesh.apply_transform(M)
+        poly_surface = PolyhedralSurface(vertices=tmesh.vertices, faces=tmesh.faces)
+
+        self.logger.info("")
+        self.logger.info(
+            "poly_surface (min_z, max_z) = (%s, %s).",
+            poly_surface.get_vertices()[:, 2].min(),
+            poly_surface.get_vertices()[:, 2].max(),
+        )
+        # self.export_mesh("monge_surface_oriented.ply", poly_surface)
+
+        monge_origin_vertex_index = poly_surface.num_vertices // 2
+        degree_monge = 2
+        degree_poly_fit = 2
+        fitter = MongeJetFitter(poly_surface, degree_poly_fit, degree_monge)
+        result = fitter.fit_at_vertex(monge_origin_vertex_index, num_rings=16)
+
+        self.logger.info("R=%s", R.tolist())
+        self.logger.info("Result = %s", result)
+        self.assertEqual(monge_origin_vertex_index, result["vertex_index"][0])
+        self.assertEqual(degree_monge, result["degree_monge"][0])
+        self.assertEqual(degree_poly_fit, result["degree_poly_fit"][0])
+        self.assertAlmostEqual(monge_polynomial.k[0], result["k"][0][0])
+        self.assertAlmostEqual(monge_polynomial.k[1], result["k"][0][1])
+        self.assertTrue(
+            _np.allclose(t, result["origin"][0])
+        )
+        self.assertTrue(
+            _np.allclose(_np.absolute(R), _np.absolute(result["direction"][0]))
+        )
+        self.assertTrue(
+            _np.allclose(
+                _np.dot(R, _np.asarray((0.0, 0.0, 1.0)).reshape((3, 1))).T,
+                _np.dot(result["poly_fit_basis"][0], _np.asarray((0.0, 0.0, 1.0)).reshape((3, 1))).T
+            )
+        )
+
+        if degree_monge < 3:
+            self.assertTrue(
+                _np.all(result["b"][0] == 0.0)
+            )
+        if degree_monge < 4:
+            self.assertTrue(
+                _np.all(result["c"][0] == 0.0)
+            )
+
+    def test_fit_all(self):
+        # import trimesh
+        from surface_poly_fit._spf_cgal import MongeJetFitter
+
+        poly_surface = create_monge_surface()
+
+        degree_monge = 4
+        degree_poly_fit = 4
+        fitter = MongeJetFitter(poly_surface, degree_poly_fit, degree_monge)
+        result = fitter.fit_all(num_rings=8)
+        self.logger.info("Result = %s", result)
+        self.assertEqual(poly_surface.num_vertices, len(result))
+        self.assertTrue(_np.all(result["degree_monge"] == degree_monge))
+        self.assertTrue(_np.all(result["degree_poly_fit"] == degree_poly_fit))
+
+        if degree_monge < 3:
+            self.assertTrue(
+                _np.all(result["b"] == 0.0)
+            )
+        if degree_monge < 4:
+            self.assertTrue(
+                _np.all(result["c"] == 0.0)
+            )
+
 
 __all__ = [s for s in dir() if not s.startswith('_')]
 
 if __name__ == "__main__":
-    _logging.basicConfig(level=_logging.DEBUG)
+    _logging.basicConfig(level=_logging.INFO)
     _unittest.main(__name__)
