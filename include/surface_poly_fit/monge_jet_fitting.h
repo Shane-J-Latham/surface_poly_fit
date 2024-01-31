@@ -187,9 +187,6 @@ public:
       Matrix_3x3 R;
       R = Quaternion().setFromTwoVectors(z_dir, nrml_dir).toRotationMatrix();
 
-      std::cout
-        << "nrml_dir = " << nrml_dir << std::endl
-        << "R = " << R << std::endl;
       return R;
     }
 

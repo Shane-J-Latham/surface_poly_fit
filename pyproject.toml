@@ -15,9 +15,13 @@ dependencies = [
     "scipy",
     "vtk",
     "rtree",
-    "trimesh"
+    "trimesh",
+    "meshio"
 ]
 dynamic = ["version"]
+
+[project.scripts]
+surface_poly_fit = "surface_poly_fit.cli:surface_poly_fit_main_cli"
 
 [tool.versioneer]
 VCS = "git"
