@@ -359,6 +359,12 @@ class MongeJetFitterTest(SurfacePolyFitTest):
                 _np.absolute(result["poly_fit_basis"][0])
             )
         )
+        self.assertTrue(
+            _np.allclose(
+                0.0,
+                _np.absolute(result["poly_fit_residual_stats"].tolist()[0])
+            )
+        )
 
         if degree_monge < 3:
             self.assertTrue(
@@ -424,6 +430,12 @@ class MongeJetFitterTest(SurfacePolyFitTest):
             _np.allclose(
                 _np.dot(R, _np.asarray((0.0, 0.0, 1.0)).reshape((3, 1))).T,
                 _np.dot(result["poly_fit_basis"][0], _np.asarray((0.0, 0.0, 1.0)).reshape((3, 1))).T
+            )
+        )
+        self.assertTrue(
+            _np.allclose(
+                0.0,
+                _np.absolute(result["poly_fit_residual_stats"].tolist()[0])
             )
         )
 

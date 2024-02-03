@@ -22,6 +22,22 @@ typedef MongeFitter::MongeForm MongeForm;
 typedef MongeFitter::MongeFormStlVec MongeFormStlVec;
 typedef MongeFitter::MongeFormStlVecPtr MongeFormStlVecPtr;
 
+
+struct ResidualStatsNumpy: public MongeFitter::ResidualStats
+{
+public:
+  ResidualStatsNumpy() :
+    MongeFitter::ResidualStats()
+  {
+  }
+
+  ResidualStatsNumpy(MongeFitter::ResidualStats const & rs) :
+    MongeFitter::ResidualStats(rs)
+  {
+  }
+
+};
+
 #pragma pack(1)
 struct MongeFormNumpy
 {
@@ -51,6 +67,8 @@ struct MongeFormNumpy
         this->poly_fit_basis[i][j] = mf.fitting_basis_(i, j);
       }
     }
+
+    this->poly_fit_residual_stats = ResidualStatsNumpy(mf.fitting_residual_stats_);
 
     for (std::size_t i = 0; i < 3; ++i)
     {
@@ -118,6 +136,7 @@ struct MongeFormNumpy
   double poly_fit_condition_number;
   Array3 pca_eigenvalues;
   Array3x3 poly_fit_basis;
+  ResidualStatsNumpy poly_fit_residual_stats;
   Array3 origin;
   Array3x3 direction;
   Array2 k;
@@ -225,6 +244,16 @@ protected:
 void export_monge_jet_fitter(pybind11::module_ m)
 {
   PYBIND11_NUMPY_DTYPE(
+      ResidualStatsNumpy,
+      min,
+      max,
+      max_abs,
+      mean,
+      median,
+      stdd
+  );
+
+  PYBIND11_NUMPY_DTYPE(
       MongeFormNumpy,
       vertex_index,
       degree_monge,
@@ -234,6 +263,7 @@ void export_monge_jet_fitter(pybind11::module_ m)
       poly_fit_condition_number,
       pca_eigenvalues,
       poly_fit_basis,
+      poly_fit_residual_stats,
       origin,
       direction,
       k,

@@ -2,6 +2,14 @@
 #define SURFACE_POLY_FIT_MONGE_JET_FITTING_H
 
 #include "surface_poly_fit/polyhedral_surface.h"
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics/stats.hpp>
+#include <boost/accumulators/statistics/mean.hpp>
+#include <boost/accumulators/statistics/variance.hpp>
+#include <boost/accumulators/statistics/min.hpp>
+#include <boost/accumulators/statistics/max.hpp>
+#include <boost/accumulators/statistics/median.hpp>
+
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <CGAL/Monge_via_jet_fitting.h>
@@ -28,6 +36,7 @@ public:
   typedef Eigen::Matrix<typename LocalKernel::FT, 3, 3> Matrix_3x3;
   typedef Eigen::Matrix<typename LocalKernel::FT, 3, 1> Matrix_3x1;
   typedef Eigen::Quaternion<typename LocalKernel::FT> Quaternion;
+  typedef CGAL::Eigen_svd CGALSvdTraits;
 
   enum FittingBasisType {
     PCA = 0,
@@ -37,10 +46,30 @@ public:
     RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN_SIGMA = 4
   };
 
-  struct MongeForm: public CGAL::Monge_via_jet_fitting<DataKernel, LocalKernel>::Monge_form
+  struct ResidualStats
+  {
+    ResidualStats() :
+      min(std::numeric_limits<LocalFloatType>::quiet_NaN()),
+      max(std::numeric_limits<LocalFloatType>::quiet_NaN()),
+      max_abs(std::numeric_limits<LocalFloatType>::quiet_NaN()),
+      mean(std::numeric_limits<LocalFloatType>::quiet_NaN()),
+      median(std::numeric_limits<LocalFloatType>::quiet_NaN()),
+      stdd(std::numeric_limits<LocalFloatType>::quiet_NaN())
+    {
+    }
+
+    LocalFloatType min;
+    LocalFloatType max;
+    LocalFloatType max_abs;
+    LocalFloatType mean;
+    LocalFloatType median;
+    LocalFloatType stdd;
+  };
+
+  struct MongeForm: public CGAL::Monge_via_jet_fitting<DataKernel, LocalKernel, CGALSvdTraits>::Monge_form
   {
   public:
-    typedef typename CGAL::Monge_via_jet_fitting<DataKernel, LocalKernel>::Monge_form Inherited;
+    typedef typename CGAL::Monge_via_jet_fitting<DataKernel, LocalKernel, CGALSvdTraits>::Monge_form Inherited;
 
     MongeForm() :
       Inherited(),
@@ -48,7 +77,8 @@ public:
       num_rings_(-1),
       poly_fit_condition_number_(0.0),
       pca_eigenvalues_(0.0, 0.0, 0.0),
-      fitting_basis_(Matrix_3x3::Zero())
+      fitting_basis_(Matrix_3x3::Zero()),
+      fitting_residual_stats_()
     {
       this->m_origin_pt = typename Inherited::Point_3(0.0, 0.0, 0.0);
       this->m_d1 = typename Inherited::Vector_3(0.0, 0.0, 0.0);
@@ -75,6 +105,7 @@ public:
     LocalFloatType poly_fit_condition_number_;
     Vector_3 pca_eigenvalues_;
     Matrix_3x3 fitting_basis_;
+    ResidualStats fitting_residual_stats_;
   };
   typedef std::vector<MongeForm> MongeFormStlVec;
   typedef std::unique_ptr<MongeFormStlVec> MongeFormStlVecPtr;
@@ -89,6 +120,12 @@ public:
     typedef typename Inherited::Point_3 Point_3;
     typedef typename Inherited::Vector_3 Vector_3;
     typedef typename Inherited::Aff_transformation Aff_transformation;
+
+    MongeViaJetFitting() :
+      Inherited(),
+      residual_stats_()
+    {
+    }
 
     static
     void switch_to_direct_orientation(
@@ -209,6 +246,48 @@ public:
       this->change_world2fitting = change_basis;
     }
 
+    void update_residual_stats(LAVector const & residuals)
+    {
+      boost::accumulators::accumulator_set<
+          LocalFloatType,
+          boost::accumulators::stats<
+            boost::accumulators::tag::min,
+            boost::accumulators::tag::max,
+            boost::accumulators::tag::mean,
+            boost::accumulators::tag::median,
+            boost::accumulators::tag::variance
+          >
+        > acc;
+
+      for (auto it = residuals.begin(); it != residuals.end(); ++it)
+      {
+        acc(*it);
+      }
+      this->residual_stats_.min = boost::accumulators::min(acc);
+      this->residual_stats_.max = boost::accumulators::max(acc);
+      this->residual_stats_.max_abs =
+        std::max(std::fabs(this->residual_stats_.min), std::fabs(this->residual_stats_.max));
+      this->residual_stats_.mean = boost::accumulators::mean(acc);
+      this->residual_stats_.median = boost::accumulators::median(acc);
+      this->residual_stats_.stdd = std::sqrt(boost::accumulators::variance(acc));
+    }
+
+    void solve_linear_system(LAMatrix &M, LAVector& Z)
+    {
+      {
+        LAVector residuals(Z);
+        this->condition_nb = CGALSvdTraits::solve(M, Z);
+
+        LAVector Y(M.cols());
+        for (std::size_t i = 0; i < M.cols(); ++i) Y.set(i, Z(i));
+        residuals = (M * Y - residuals);
+        this->update_residual_stats(residuals);
+      }
+      for (int k=0; k <= this->deg; k++) for (int i=0; i<=k; i++)
+        // Z[k*(k+1)/2+i] /= std::pow(this->preconditionning,k);
+        Z.set( k*(k+1)/2+i, Z(k*(k+1)/2+i) / std::pow(this->preconditionning,k) );
+    }
+
     template <class InputIterator>
     MongeForm operator()(
         InputIterator begin,
@@ -244,10 +323,12 @@ public:
 
       MongeForm ret_monge_form(monge_form);
       ret_monge_form.poly_fit_condition_number_ = this->condition_number();
+      ret_monge_form.fitting_residual_stats_ = this->residual_stats_;
 
       return ret_monge_form;
     }
 
+    ResidualStats residual_stats_;
   };
 
 
