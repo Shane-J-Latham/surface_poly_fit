@@ -538,7 +538,7 @@ public:
 
   MongeForm fit_at_vertex(
       Matrix_3x3 const & fit_basis
-  )
+  ) const
   {
     MongeViaJetFitting monge_fit;
     MongeForm monge_form;
@@ -558,7 +558,7 @@ public:
     return monge_form;
   }
 
-  std::int64_t num_rings_; // number of vertex neightbourhood rings
+  std::int64_t num_rings_; // number of vertex neighbourhood rings
   std::vector<Point_3> in_points_;  //container for data points
   std::vector<Vector_3> in_normals_;  //container for data point normals
   std::vector<std::int32_t> in_ring_;  //container for point ring-number

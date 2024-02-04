@@ -1,6 +1,7 @@
 """
 Command line interface for surface polynomial fitting.
 """
+from surface_poly_fit._spf_cgal import MongeJetFitter
 
 
 def read_polyhedral_surface(file_name):
@@ -51,11 +52,19 @@ def surface_poly_fit_cli(args):
         output_file_name = os.path.splitext(os.path.split(args.mesh_file)[1])[0]
         output_file_name += "_surface_poly_fit" + os.path.extsep + "npz"
     num_rings_list = eval(args.num_rings)
+    # Convert the argument string to enum type.
+    args.poly_fit_basis_type = MongeJetFitter.FittingBasisType.__members__[args.poly_fit_basis_type]
     logger.info("Reading mesh from file %s...", args.mesh_file)
     ps = read_polyhedral_surface(args.mesh_file)
     fitter = Fitter(ps, degree_poly_fit=args.degree_poly_fit, degree_monge=args.degree_monge)
+    fitter.ring_normal_gaussian_sigma = args.poly_fit_basis_gaussian_sigma
+    logger.info("poly_fit_basis_type=%s...", args.poly_fit_basis_type)
     logger.info("Fitting for num_rings=%s...", num_rings_list[0])
-    result_ary = fitter.fit_all(num_rings_list[0])
+    result_ary = \
+        fitter.fit_all(
+            num_rings=num_rings_list[0],
+            fit_basis_type=args.poly_fit_basis_type
+        )
     for num_rings in num_rings_list[1:]:
         logger.info("Fitting for num_rings=%s...", num_rings)
         result_ary = np.hstack(fitter.fit_all(num_rings=num_rings))
@@ -69,6 +78,7 @@ def get_argument_parser():
     Returns a :obj:`argparse.ArgumentParser` to handle command line option processing.
     """
     import argparse
+    from . import MongeJetFitter
     ap = \
         argparse.ArgumentParser(
             "surface_poly_fit",
@@ -110,6 +120,27 @@ def get_argument_parser():
         action='store',
         help="List of neighbourhood-ring sizes.",
         default="[2, 4, 8]"
+    )
+    ap.add_argument(
+        "--poly_fit_basis_type",
+        choices=tuple(MongeJetFitter.FittingBasisType.__members__.keys()),
+        help=(
+            "How the polynomial fitting basis is determined from the neighbourhood-ring"
+            +
+            " of vertex-coorindates and/or the vertex-normals."
+        ),
+        default="RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN"
+    )
+    ap.add_argument(
+        "--poly_fit_basis_gaussian_sigma",
+        action="store",
+        help=(
+            "The sigma value used when calculating Gaussian weights for "
+            +
+            " RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN_SIGMA polynomial fitting basis."
+        ),
+        type=float,
+        default=2.0
     )
     ap.add_argument(
         "mesh_file",
