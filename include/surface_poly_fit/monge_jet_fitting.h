@@ -535,7 +535,7 @@ public:
       CGAL_For_all(vitb, vite) put(vertex_prop_map, &(*vitb), -1);
       MongeJetFitter fitter(*this);
 #pragma omp for
-      for (vtx_idx=0; vtx_idx != num_vertices; ++vtx_idx)
+      for (vtx_idx=0; vtx_idx < num_vertices; ++vtx_idx)
       {
         auto vtx_it = poly_surface.vertices_begin() + vtx_idx;
         fitter.gather_fitting_points(poly_surface, &(*vtx_it), num_rings, vertex_prop_map);
