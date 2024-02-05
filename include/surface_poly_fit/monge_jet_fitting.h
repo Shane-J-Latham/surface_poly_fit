@@ -373,13 +373,12 @@ public:
   }
 
   void gather_fitting_points(
-      PolySurf & poly_surface,
-      Vertex * vertex,
+      Vertex const * vertex,
       std::int64_t const num_rings,
       typename PolySurf::Vertex_PM_type & vertex_prop_map
   )
   {
-    poly_surface.gather_fitting_points(
+    PolySurf::gather_fitting_points(
         vertex,
         num_rings,
         this->in_points_,
@@ -396,7 +395,7 @@ public:
   )
   {
     auto vtx_it = poly_surface.vertices_begin() + vertex_index;
-    return this->gather_fitting_points(poly_surface, &(*vtx_it), num_rings, poly_surface.vertex_prop_map_);
+    return this->gather_fitting_points(&(*vtx_it), num_rings, poly_surface.vertex_prop_map_);
   }
 
   Matrix_3x3 calculate_fit_basis(FittingBasisType const & fit_basis_type)
@@ -504,7 +503,7 @@ public:
   }
 
   MongeFormStlVecPtr fit_all(
-      PolySurf & poly_surface,
+      PolySurf const & poly_surface,
       const std::int64_t num_rings,
       FittingBasisType const & fit_basis_type
   )
@@ -532,13 +531,14 @@ public:
       auto vitb = poly_surface.vertices_begin();
       auto vite = poly_surface.vertices_end();
       vertex_map.clear();
+      vertex_map.reserve(num_vertices);
       CGAL_For_all(vitb, vite) put(vertex_prop_map, &(*vitb), -1);
       MongeJetFitter fitter(*this);
 #pragma omp for schedule(dynamic, 128)
       for (vtx_idx=0; vtx_idx < num_vertices; ++vtx_idx)
       {
         auto vtx_it = poly_surface.vertices_begin() + vtx_idx;
-        fitter.gather_fitting_points(poly_surface, &(*vtx_it), num_rings, vertex_prop_map);
+        fitter.gather_fitting_points(&(*vtx_it), num_rings, vertex_prop_map);
         Matrix_3x3 const fit_basis = fitter.calculate_fit_basis(fit_basis_type);
         MongeForm monge_form = fitter.fit_at_vertex(fit_basis);
         fitter.set_monge_form_data(monge_form, vtx_idx, num_rings, fit_basis);

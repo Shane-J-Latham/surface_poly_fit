@@ -416,14 +416,15 @@ public:
     this->reset_vertex_prop_map();
   }
 
+  static
   void gather_fitting_points(
-      Vertex* v,
+      Vertex const * v,
       std::size_t num_rings,
       std::vector<Point_3> & in_points,
       std::vector<Vector_3> & in_normals,
       std::vector<std::int32_t> & in_ring,
       Vertex_PM_type & vpm
-  ) const
+  )
   {
     //container to collect vertices of v on the PolyhedralSurface
     std::vector<Vertex const *> gathered;
@@ -447,7 +448,6 @@ public:
       in_ring.push_back(vpm[*itb]);
     }
     Poly_rings::reset_ring_indices(gathered, vpm);
-
   }
 
   PolyhedralSurfacePtr create_ring_patch(
