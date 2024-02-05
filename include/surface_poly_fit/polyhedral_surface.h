@@ -217,22 +217,21 @@ public:
   typedef typename HalfedgeDS::Vertex Vertex;
   typedef typename HalfedgeDS::Vertex_handle Vertex_handle;
   typedef typename HalfedgeDS::Vertex::Point Point;
-  typedef std::vector < Vertex * > VertexStlVec;
+  typedef std::vector < Vertex const * > VertexStlVec;
   typedef typename HalfedgeDS::Halfedge Halfedge;
   typedef typename Halfedge::Facet Facet;
   typedef typename Halfedge::Facet_handle Facet_handle;
   typedef boost::unordered_map<std::int64_t, std::int64_t> VertexIndexToNewIndexMap;
   typedef std::vector<Facet_handle> FacetHandleStlVec;
   typedef CGAL::Polyhedron_incremental_builder_3<HalfedgeDS> Builder;
-  typedef boost::unordered_set<Facet_handle, CGAL::Handle_hash_function> FacetHandleSet;
+  typedef boost::unordered_set<Facet const *, CGAL::Handle_hash_function> FacetHandleSet;
 
   PolyhedralPatchBuilder(
-      std::vector < Vertex * > const & vertices
+      VertexStlVec const & vertices
   )
     : Inherited(),
       vertices_(vertices)
   {
-
   }
 
   void operator()(HalfedgeDS & hds)
@@ -263,9 +262,9 @@ public:
         do
         {
           auto facetHdl = he_it->facet();
-          if (facetHdlSet.find(facetHdl) == facetHdlSet.end())
+          if (facetHdlSet.find(&(*facetHdl)) == facetHdlSet.end())
           {
-            facetHdlSet.insert(facetHdl);
+            facetHdlSet.insert(&(*facetHdl));
             auto fct_he_it = facetHdl->facet_begin();
             vertex_indices.clear();
             do
@@ -346,7 +345,7 @@ public:
   };
 
   //Vertex property map, with boost::unordered_map
-  typedef std::unordered_map<Vertex*, int, CGAL::Handle_hash_function> Vertex2int_map_type;
+  typedef std::unordered_map<Vertex const *, int, CGAL::Handle_hash_function> Vertex2int_map_type;
   typedef boost::associative_property_map< Vertex2int_map_type > Vertex_PM_type;
   typedef PolyhedralSurfaceRings<PolyhedralSurface, Vertex_PM_type > Poly_rings;
 
@@ -427,7 +426,7 @@ public:
   ) const
   {
     //container to collect vertices of v on the PolyhedralSurface
-    std::vector<Vertex*> gathered;
+    std::vector<Vertex const *> gathered;
     //initialize
     in_points.clear();
     in_normals.clear();
@@ -439,7 +438,7 @@ public:
     in_points.reserve(gathered.size());
     in_normals.reserve(gathered.size());
     in_ring.reserve(gathered.size());
-    std::vector<Vertex*>::iterator
+    std::vector<Vertex const *>::iterator
       itb = gathered.begin(), ite = gathered.end();
     CGAL_For_all(itb, ite)
     {
@@ -457,7 +456,7 @@ public:
   )
   {
     auto vtx_it = this->vertices_begin() + vertex_index;
-    std::vector<Vertex*> gathered;
+    std::vector<Vertex const *> gathered;
     Poly_rings::collect_i_rings(&(*vtx_it), num_rings, gathered, this->vertex_prop_map_);
 
     PolyhedralPatchBuilder<HalfedgeDS> bldr(gathered);
