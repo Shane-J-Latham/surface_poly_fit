@@ -375,7 +375,8 @@ public:
   void gather_fitting_points(
       PolySurf & poly_surface,
       Vertex * vertex,
-      std::int64_t const num_rings
+      std::int64_t const num_rings,
+      typename PolySurf::Vertex_PM_type & vertex_prop_map
   )
   {
     poly_surface.gather_fitting_points(
@@ -384,7 +385,7 @@ public:
         this->in_points_,
         this->in_normals_,
         this->in_ring_,
-        poly_surface.vertex_prop_map_
+        vertex_prop_map
     );
   }
 
@@ -395,7 +396,7 @@ public:
   )
   {
     auto vtx_it = poly_surface.vertices_begin() + vertex_index;
-    return this->gather_fitting_points(poly_surface, &(*vtx_it), num_rings);
+    return this->gather_fitting_points(poly_surface, &(*vtx_it), num_rings, poly_surface.vertex_prop_map_);
   }
 
   Matrix_3x3 calculate_fit_basis(FittingBasisType const & fit_basis_type)
@@ -508,10 +509,10 @@ public:
       FittingBasisType const & fit_basis_type
   )
   {
-    MongeFormStlVecPtr monge_forms_ptr = std::make_unique<MongeFormStlVec>();
-    monge_forms_ptr->reserve(
-      std::distance(poly_surface.vertices_begin(), poly_surface.vertices_end())
-    );
+    MongeFormStlVecPtr monge_forms_ptr =
+      std::make_unique<MongeFormStlVec>(
+        std::distance(poly_surface.vertices_begin(), poly_surface.vertices_end())
+      );
 
     this->num_rings_ = num_rings;
     this->pca_eigenvals_ =
@@ -520,21 +521,29 @@ public:
         std::numeric_limits<typename LocalKernel::FT>::quiet_NaN(),
         std::numeric_limits<typename LocalKernel::FT>::quiet_NaN()
       );
-    for (auto vtx_it = poly_surface.vertices_begin(); vtx_it != poly_surface.vertices_end(); ++vtx_it)
+
+    const std::size_t num_vertices = monge_forms_ptr->size();
+
+#pragma omp parallel shared(poly_surface, num_rings, fit_basis_type, monge_forms_ptr, num_vertices)
     {
-      this->gather_fitting_points(poly_surface, &(*vtx_it), num_rings);
-      Matrix_3x3 const fit_basis = this->calculate_fit_basis(fit_basis_type);
-      MongeForm monge_form = this->fit_at_vertex(fit_basis);
-      this->set_monge_form_data(
-        monge_form,
-        std::distance(
-            poly_surface.vertices_begin(),
-            vtx_it
-        ),
-        num_rings,
-        fit_basis
-      );
-      monge_forms_ptr->push_back(monge_form);
+      std::size_t vtx_idx = 0;
+      typename PolySurf::Vertex2int_map_type vertex_map;
+      typename PolySurf::Vertex_PM_type vertex_prop_map(vertex_map);
+      auto vitb = poly_surface.vertices_begin();
+      auto vite = poly_surface.vertices_end();
+      vertex_map.clear();
+      CGAL_For_all(vitb, vite) put(vertex_prop_map, &(*vitb), -1);
+      MongeJetFitter fitter(*this);
+#pragma omp for
+      for (vtx_idx=0; vtx_idx != num_vertices; ++vtx_idx)
+      {
+        auto vtx_it = poly_surface.vertices_begin() + vtx_idx;
+        fitter.gather_fitting_points(poly_surface, &(*vtx_it), num_rings, vertex_prop_map);
+        Matrix_3x3 const fit_basis = fitter.calculate_fit_basis(fit_basis_type);
+        MongeForm monge_form = fitter.fit_at_vertex(fit_basis);
+        fitter.set_monge_form_data(monge_form, vtx_idx, num_rings, fit_basis);
+        (*monge_forms_ptr)[vtx_idx] = monge_form;
+      }
     }
     return monge_forms_ptr;
   }

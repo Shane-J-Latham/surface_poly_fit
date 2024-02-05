@@ -424,7 +424,7 @@ public:
       std::vector<Vector_3> & in_normals,
       std::vector<std::int32_t> & in_ring,
       Vertex_PM_type & vpm
-  )
+  ) const
   {
     //container to collect vertices of v on the PolyhedralSurface
     std::vector<Vertex*> gathered;
