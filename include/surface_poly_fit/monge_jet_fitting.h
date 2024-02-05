@@ -522,11 +522,11 @@ public:
         std::numeric_limits<typename LocalKernel::FT>::quiet_NaN()
       );
 
-    const std::size_t num_vertices = monge_forms_ptr->size();
+    const std::int64_t num_vertices = std::int64_t(monge_forms_ptr->size());
 
 #pragma omp parallel shared(poly_surface, num_rings, fit_basis_type, monge_forms_ptr, num_vertices)
     {
-      std::size_t vtx_idx = 0;
+      std::int64_t vtx_idx = 0;
       typename PolySurf::Vertex2int_map_type vertex_map;
       typename PolySurf::Vertex_PM_type vertex_prop_map(vertex_map);
       auto vitb = poly_surface.vertices_begin();
