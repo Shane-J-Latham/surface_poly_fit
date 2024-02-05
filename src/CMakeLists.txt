@@ -22,9 +22,16 @@ IF ( CGAL_FOUND )
     )
 
     ADD_LIBRARY(_spf_cgal MODULE ${spf_cgal_SRCS})
+    IF ( OpenMP_CXX_FOUND )
+      SET(OPENMP_TARGET OpenMP::OpenMP_CXX)
+    ELSE()
+      UNSET(OPENMP_TARGET)
+    ENDIF()
+
     TARGET_LINK_LIBRARIES(
       _spf_cgal
       CGAL::CGAL
+      ${OPENMP_TARGET}
       ${PYTHON_LIBRARIES}
     )
     PYTHON_EXTENSION_MODULE(_spf_cgal)
@@ -40,7 +47,7 @@ IF ( CGAL_FOUND )
         PRE_INCLUDE_REGEXES ${VCPKG_DEPENDENCIES}
         PRE_EXCLUDE_REGEXES ".*"
         DESTINATION surface_poly_fit
-    )
+      )
     ELSE()
       MESSAGE(STATUS "PCSR_PYTHON_SITE_PACKAGES_INSTALL_DIR=${PCSR_PYTHON_SITE_PACKAGES_INSTALL_DIR}")
       INSTALL(

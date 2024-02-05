@@ -2,6 +2,9 @@
 #define SURFACE_POLY_FIT_MONGE_JET_FITTING_H
 
 #include "surface_poly_fit/polyhedral_surface.h"
+#if SPF_HAVE_OPENMP
+#include <omp.h>
+#endif
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
 #include <boost/accumulators/statistics/mean.hpp>
