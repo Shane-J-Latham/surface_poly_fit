@@ -21,7 +21,7 @@ jobs:
     - name: Install ubuntu dependencies
       run: sudo apt-get install libspatialindex-dev libeigen3-dev libboost-all-dev libcgal-dev pybind11-dev
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'
