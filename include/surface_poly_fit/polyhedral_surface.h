@@ -24,6 +24,7 @@
 
 #include <cstdlib>
 #include <cstdio>
+#include <functional>
 
 namespace spf
 {
@@ -343,6 +344,20 @@ std::size_t hash_value(boost::graph_traits<spf::Polyhedron>::face_descriptor con
 {
   return CGAL::Handle_hash_function()(fd);
 }
+
+}
+
+namespace std
+{
+// Custom specialization of std::hash can be injected in namespace std.
+template<>
+struct hash<boost::graph_traits<spf::Polyhedron>::face_descriptor>
+{
+  std::size_t operator()(const boost::graph_traits<spf::Polyhedron>::face_descriptor& fd) const noexcept
+  {
+    return CGAL::Handle_hash_function()(fd);
+  }
+};
 
 }
 

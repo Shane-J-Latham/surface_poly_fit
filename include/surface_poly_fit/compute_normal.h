@@ -2,6 +2,10 @@
 #ifndef SURFACE_POLY_FIT_COMPUTE_NORMAL_H
 #define SURFACE_POLY_FIT_COMPUTE_NORMAL_H
 
+#include <CGAL/Polygon_mesh_processing/compute_normal.h>
+
+#if 0
+
 #include <CGAL/version.h>
 #if CGAL_VERSION_NR >= 1050600000
 #include "surface_poly_fit/compute_normal_CGAL_5pt6.h"
@@ -10,4 +14,7 @@
 #else
 #include "surface_poly_fit/compute_normal_CGAL_5pt4.h"
 #endif
+
+#endif
+
 #endif // SURFACE_POLY_FIT_COMPUTE_NORMAL_H
