@@ -3,11 +3,12 @@
 
 #include "surface_poly_fit/polyhedral_surface_ops.h"
 #include "surface_poly_fit/polyhedral_surface_rings.h"
+#include "surface_poly_fit/compute_normal.h"
 
+#include <CGAL/Handle_hash_function.h>
 #include <CGAL/Simple_cartesian.h>
 #include <CGAL/Polyhedron_3.h>
 #include <CGAL/HalfedgeDS_vector.h>
-#include <CGAL/Polygon_mesh_processing/compute_normal.h>
 #include <CGAL/Polyhedron_incremental_builder_3.h>
 
 #include <CGAL/property_map.h>
@@ -385,10 +386,17 @@ public:
 
   void update_vertex_normals()
   {
-    Poly_hedge_ops::compute_edges_length(*this, this->hedge_prop_map_);
+    typedef boost::graph_traits<Polyhedron>::vertex_descriptor vertex_descriptor;
+
+    boost::unordered_map<vertex_descriptor, Traits::Vector_3, CGAL::Handle_hash_function> vnormals;
+    CGAL::Polygon_mesh_processing::compute_vertex_normals(
+      *(dynamic_cast<Polyhedron *>(this)),
+      boost::make_assoc_property_map(vnormals)
+    );
+
     for (auto vtx_it = this->vertices_begin(); vtx_it != this->vertices_end(); ++vtx_it)
     {
-      vtx_it->normal = Poly_facet_ops::compute_vertex_average_unit_normal(&(*vtx_it), this->facet_prop_map_);
+      vtx_it->normal = vnormals[vtx_it];
     }
   }
 
