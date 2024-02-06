@@ -27,11 +27,20 @@ def write_result_array(output_file_name, result_ary, polyhedral_surface=None):
     """
     import numpy as np
 
+    vertices = None
+    faces = None
+    vertex_normals = None
+    if polyhedral_surface is not None:
+        vertices = polyhedral_surface.get_vertices()
+        faces = polyhedral_surface.get_faces()
+        vertex_normals = polyhedral_surface.get_vertex_normals()
+
     np.savez(
         output_file_name,
         surface_poly_fit_results=result_ary,
-        vertices=polyhedral_surface.get_vertices() if polyhedral_surface is not None else None,
-        faces=polyhedral_surface.get_faces() if polyhedral_surface is not None else None
+        vertices=vertices,
+        faces=faces,
+        vertex_normals=vertex_normals
     )
 
 
@@ -55,8 +64,13 @@ def surface_poly_fit_cli(args):
     # Convert the argument string to enum type.
     args.poly_fit_basis_type = MongeJetFitter.FittingBasisType.__members__[args.poly_fit_basis_type]
     logger.info("Reading mesh from file %s...", args.mesh_file)
-    ps = read_polyhedral_surface(args.mesh_file)
-    fitter = Fitter(ps, degree_poly_fit=args.degree_poly_fit, degree_monge=args.degree_monge)
+    polyhedral_surface = read_polyhedral_surface(args.mesh_file)
+    fitter = \
+        Fitter(
+            polyhedral_surface,
+            degree_poly_fit=args.degree_poly_fit,
+            degree_monge=args.degree_monge
+        )
     fitter.ring_normal_gaussian_sigma = args.poly_fit_basis_gaussian_sigma
     logger.info("poly_fit_basis_type=%s...", args.poly_fit_basis_type)
     logger.info("Fitting for num_rings=%s...", num_rings_list[0])
@@ -70,7 +84,7 @@ def surface_poly_fit_cli(args):
         result_ary = np.hstack(fitter.fit_all(num_rings=num_rings))
 
     logger.info("Writing fitting result to file %s...", output_file_name)
-    write_result_array(output_file_name, result_ary)
+    write_result_array(output_file_name, result_ary, polyhedral_surface)
 
 
 def get_argument_parser():
