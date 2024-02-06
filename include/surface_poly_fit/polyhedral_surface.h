@@ -3,13 +3,13 @@
 
 #include "surface_poly_fit/polyhedral_surface_ops.h"
 #include "surface_poly_fit/polyhedral_surface_rings.h"
-#include "surface_poly_fit/compute_normal.h"
 
 #include <CGAL/Handle_hash_function.h>
 #include <CGAL/Simple_cartesian.h>
 #include <CGAL/Polyhedron_3.h>
 #include <CGAL/HalfedgeDS_vector.h>
 #include <CGAL/Polyhedron_incremental_builder_3.h>
+#include <CGAL/Polygon_mesh_processing/compute_normal.h>
 
 #include <CGAL/property_map.h>
 #include <boost/graph/properties.hpp>
