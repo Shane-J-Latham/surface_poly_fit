@@ -326,6 +326,29 @@ typedef CGAL::Simple_cartesian<DFT>  Data_Kernel;
 typedef CGAL::Polyhedron_3 < Data_Kernel, Wrappers_VFH,  CGAL::HalfedgeDS_vector > Polyhedron;
 typedef Data_Kernel::Vector_3 Vector_3;
 
+inline
+std::size_t hash_value(boost::graph_traits<Polyhedron>::face_descriptor const & fd)
+{
+  return CGAL::Handle_hash_function()(fd);
+}
+
+} // namespace spf
+
+
+namespace boost
+{
+
+inline
+std::size_t hash_value(boost::graph_traits<spf::Polyhedron>::face_descriptor const & fd)
+{
+  return CGAL::Handle_hash_function()(fd);
+}
+
+}
+
+namespace spf
+{
+
 class PolyhedralSurface: public Polyhedron
 {
 public:
@@ -483,8 +506,6 @@ public:
   Vertex2int_map_type vertex_map_;
   Vertex_PM_type vertex_prop_map_;
 };
-
-
 
 } // namespace spf
 
