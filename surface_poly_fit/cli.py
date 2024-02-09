@@ -8,6 +8,8 @@ def read_polyhedral_surface(file_name):
     """
     Read mesh from file. Uses :mod:`meshio` to parse file.
 
+    :type file_name: :obj:`str`
+    :param file_name: Mesh file path.
     :rtype: :obj:`surface_poly_fit.PolyhedralSurface`
     """
     import numpy as np
@@ -22,8 +24,31 @@ def read_polyhedral_surface(file_name):
 
 def write_result_array(output_file_name, result_ary, polyhedral_surface=None):
     """
-    Write polynomial fit results and :samp:`{polyhedral_surface}` vertices and face-lists
-    to file.
+    Writes polynomial fit results and :samp:`{polyhedral_surface}` vertices, face-lists
+    and vertex-normals to :samp:`.npz` file. The *fields* within the written :samp:`.npz`
+    are:
+
+    `"surface_poly_fit_results"`
+       The :samp:`{result_ary}`.
+
+    `"vertices"`
+       The :samp:`{polyhedral_surface}.get_vertices()`.
+
+    `"faces"`
+       The :samp:`{polyhedral_surface}.get_faces()`.
+
+    `"vertex_normals"`
+       The :samp:`{polyhedral_surface}.get_vertex_normals()`.
+
+
+    :type output_file_name: :obj:`str`
+    :param output_file_name: Output file path for :func:`numpy.savez_compressed` file.
+    :type result_ary: :obj:`numpy.ndarray`
+    :param result_ary: Polynomial fitting result
+       array (e.g. as returned by :meth:`surface_poly_fit.MongeJetFitter.fit_all`).
+    :type polyhedral_surface: :obj:`surface_poly_fit.PolyhedralSurface`
+    :param polyhedral_surface: If not :obj:`None`, write vertices, faces and vertex-normals
+        the :samp:`.npz` file.
     """
     import numpy as np
 
@@ -35,7 +60,7 @@ def write_result_array(output_file_name, result_ary, polyhedral_surface=None):
         faces = polyhedral_surface.get_faces()
         vertex_normals = polyhedral_surface.get_vertex_normals()
 
-    np.savez(
+    np.savez_compressed(
         output_file_name,
         surface_poly_fit_results=result_ary,
         vertices=vertices,
@@ -47,6 +72,10 @@ def write_result_array(output_file_name, result_ary, polyhedral_surface=None):
 def surface_poly_fit_cli(args):
     """
     Command line interface for reading mesh file, fitting polynomials and writing results to file.
+
+    :type args: :obj:`types.SimpleNamespace`
+    :param args: Parsed command line arguments (e.g. as returned
+       by :samp:`surface_poly_fit.get_argument_parser().parse_args()`.
     """
     import logging
     import os
@@ -90,6 +119,9 @@ def surface_poly_fit_cli(args):
 def get_argument_parser():
     """
     Returns a :obj:`argparse.ArgumentParser` to handle command line option processing.
+
+    :rtype :obj:`argparse.ArgumentParser`
+    :return: Argument parser.
     """
     import argparse
     from . import MongeJetFitter
@@ -166,7 +198,7 @@ def get_argument_parser():
 
 def surface_poly_fit_main_cli():
     """
-    Entry-point for command line interface.
+    Entry-point function for command line interface.
     """
     surface_poly_fit_cli(get_argument_parser().parse_args())
 
