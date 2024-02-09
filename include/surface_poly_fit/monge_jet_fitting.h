@@ -17,6 +17,17 @@
 #include <Eigen/Geometry>
 #include <CGAL/Monge_via_jet_fitting.h>
 #include <CGAL/Eigen_svd.h>
+
+#include <CGAL/Simple_cartesian.h>
+#include <CGAL/MP_Float.h>
+#include <CGAL/min_quadrilateral_2.h>
+#include <CGAL/Min_sphere_of_points_d_traits_2.h>
+#include <CGAL/Min_sphere_of_spheres_d.h>
+#include <CGAL/ch_graham_andrew.h>
+#include <CGAL/convex_hull_constructive_traits_2.h>
+#include <CGAL/Approximate_min_ellipsoid_d.h>
+#include <CGAL/Approximate_min_ellipsoid_d_traits_2.h>
+
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -47,6 +58,50 @@ public:
     RING_NORMAL_MEAN = 2,
     RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN = 3,
     RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN_SIGMA = 4
+  };
+
+  struct BoundingArea
+  {
+    BoundingArea() :
+      rectangle_min_side_length(std::numeric_limits<LocalFloatType>::quiet_NaN()),
+      rectangle_max_side_length(std::numeric_limits<LocalFloatType>::quiet_NaN()),
+      circle_radius(std::numeric_limits<LocalFloatType>::quiet_NaN()),
+      ellipse_min_radius(std::numeric_limits<LocalFloatType>::quiet_NaN()),
+      ellipse_max_radius(std::numeric_limits<LocalFloatType>::quiet_NaN())
+    {
+    }
+
+    template <typename TPoly2d>
+    static
+    BoundingArea from_rectangle(TPoly2d const & rect)
+    {
+      BoundingArea return_ba;
+      return_ba.rectangle_min_side_length = std::numeric_limits<LocalFloatType>::max();
+      return_ba.rectangle_max_side_length = std::numeric_limits<LocalFloatType>::min();
+      auto prev_it = rect.vertices_begin();
+      for (auto it = prev_it + 1; it != rect.vertices_end(); ++it, ++prev_it)
+      {
+        auto dist_sqrd = (*it - *prev_it).squared_length();
+        if (dist_sqrd < return_ba.rectangle_min_side_length)
+        {
+          return_ba.rectangle_min_side_length = dist_sqrd;
+        }
+        if (dist_sqrd > return_ba.rectangle_max_side_length)
+        {
+          return_ba.rectangle_max_side_length = dist_sqrd;
+        }
+
+      }
+      return_ba.rectangle_min_side_length = std::sqrt(return_ba.rectangle_min_side_length);
+      return_ba.rectangle_max_side_length = std::sqrt(return_ba.rectangle_max_side_length);
+      return return_ba;
+    }
+
+    LocalFloatType rectangle_min_side_length;
+    LocalFloatType rectangle_max_side_length;
+    LocalFloatType circle_radius;
+    LocalFloatType ellipse_min_radius;
+    LocalFloatType ellipse_max_radius;
   };
 
   struct ResidualStats
@@ -109,6 +164,7 @@ public:
     Vector_3 pca_eigenvalues_;
     Matrix_3x3 fitting_basis_;
     ResidualStats fitting_residual_stats_;
+    BoundingArea fitting_bounding_area_;
   };
   typedef std::vector<MongeForm> MongeFormStlVec;
   typedef std::unique_ptr<MongeFormStlVec> MongeFormStlVecPtr;
@@ -126,7 +182,8 @@ public:
 
     MongeViaJetFitting() :
       Inherited(),
-      residual_stats_()
+      residual_stats_(),
+      bounding_area_()
     {
     }
 
@@ -249,6 +306,102 @@ public:
       this->change_world2fitting = change_basis;
     }
 
+    template <class InputIterator>
+    void
+    fill_matrix(InputIterator begin, InputIterator end,
+                std::size_t d, LAMatrix &M, LAVector& Z)
+    {
+      typedef typename LocalKernel::FT FT;
+
+      typedef CGAL::Simple_cartesian<FT> K;
+      typedef typename K::Point_2        Point2d;
+      typedef CGAL::Polygon_2<K>         Polygon2d;
+      typedef CGAL::Min_sphere_of_points_d_traits_2<K,FT>    MinSphereTraits;
+      typedef CGAL::Min_sphere_of_spheres_d<MinSphereTraits> Min_sphere;
+      typedef CGAL::Approximate_min_ellipsoid_d_traits_2<K, CGAL::MP_Float> MinEllipseTraits;
+      typedef CGAL::Approximate_min_ellipsoid_d<MinEllipseTraits>           ApproxMinEllipse;
+      using CGAL::fact;
+
+      CGAL::Cartesian_converter<DataKernel, LocalKernel> D2L_converter;
+      //origin of fitting coord system = first input data point
+      Point_3 point0 = D2L_converter(*begin);
+      //transform coordinates of sample points with a
+      //translation ($-p$) and multiplication by $ P_{W\rightarrow F}$.
+      Point_3 orig(0.,0.,0.);
+      Vector_3 v_point0_orig(orig - point0);
+      Aff_transformation transl(CGAL::TRANSLATION, v_point0_orig);
+      this->translate_p0 = transl;
+      Aff_transformation transf_points = this->change_world2fitting *
+        this->translate_p0;
+
+      //compute and store transformed points
+      std::vector<Point_3> pts_in_fitting_basis;
+      pts_in_fitting_basis.reserve(this->nb_input_pts);
+      CGAL_For_all(begin,end){
+        Point_3 cur_pt = transf_points(D2L_converter(*begin));
+        pts_in_fitting_basis.push_back(cur_pt);
+      }
+
+      //Compute preconditionning
+      FT precond = 0.;
+      typename std::vector<Point_3>::iterator itb = pts_in_fitting_basis.begin(),
+        ite = pts_in_fitting_basis.end();
+      CGAL_For_all(itb,ite) precond += CGAL::abs(itb->x()) + CGAL::abs(itb->y());
+      precond /= 2*this->nb_input_pts;
+      this->preconditionning = precond;
+
+      {
+        // Calculate minimum bounding rectangle of 2D points.
+        std::vector<Point2d> pts2d;
+        pts2d.reserve(this->nb_input_pts);
+        itb = pts_in_fitting_basis.begin();
+        CGAL_For_all(itb,ite) {
+          pts2d.push_back(Point2d(itb->x(), itb->y()));
+        }
+        std::vector<Point2d> ch2d;
+        ch2d.reserve(this->nb_input_pts / 2);
+        CGAL::ch_graham_andrew( pts2d.rbegin(), pts2d.rend(), std::back_inserter(ch2d), CGAL::Convex_hull_constructive_traits_2<K>());
+
+        Polygon2d bounding_rect;
+        CGAL::min_rectangle_2(ch2d.begin(), ch2d.end(), std::back_inserter(bounding_rect));
+        this->bounding_area_ = BoundingArea::from_rectangle(bounding_rect);
+        Min_sphere ms(ch2d.begin(), ch2d.end());
+        this->bounding_area_.circle_radius = ms.radius();
+        ApproxMinEllipse me(0.002, ch2d.begin(), ch2d.end());
+        this->bounding_area_.ellipse_max_radius = 0.5 * *(me.axes_lengths_begin());
+        this->bounding_area_.ellipse_min_radius = 0.5 * *(me.axes_lengths_begin() + 1);
+        if (this->bounding_area_.ellipse_max_radius < this->bounding_area_.ellipse_min_radius)
+        {
+          std::swap(this->bounding_area_.ellipse_max_radius, this->bounding_area_.ellipse_min_radius);
+        }
+      }
+
+      //fill matrices M and Z
+      itb = pts_in_fitting_basis.begin();
+      int line_count = 0;
+      FT x, y;
+
+      itb = pts_in_fitting_basis.begin();
+      CGAL_For_all(itb,ite) {
+        x = itb->x();
+        y = itb->y();
+
+        //  Z[line_count] = itb->z();
+        Z.set(line_count,itb->z());
+        for (std::size_t k=0; k <= d; k++) {
+          for (std::size_t i=0; i<=k; i++) {
+            M.set(line_count, k*(k+1)/2+i,
+                  std::pow(x,static_cast<int>(k-i))
+                  * std::pow(y,static_cast<int>(i))
+                  /( fact(static_cast<unsigned int>(i)) *
+                     fact(static_cast<unsigned int>(k-i))
+                     *std::pow(this->preconditionning,static_cast<int>(k))));
+          }
+        }
+        line_count++;
+      }
+    }
+
     void update_residual_stats(LAVector const & residuals)
     {
       boost::accumulators::accumulator_set<
@@ -327,11 +480,13 @@ public:
       MongeForm ret_monge_form(monge_form);
       ret_monge_form.poly_fit_condition_number_ = this->condition_number();
       ret_monge_form.fitting_residual_stats_ = this->residual_stats_;
+      ret_monge_form.fitting_bounding_area_ = this->bounding_area_;
 
       return ret_monge_form;
     }
 
     ResidualStats residual_stats_;
+    BoundingArea bounding_area_;
   };
 
 

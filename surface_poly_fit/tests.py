@@ -6,14 +6,6 @@ import unittest as _unittest
 import logging as _logging
 
 
-# have_trimesh = False
-# try:
-#     import trimesh as _trimesh
-#     have_trimesh = True
-# except Exception:
-#     pass
-
-
 class SurfacePolyFitTest(_unittest.TestCase):
 
     """
@@ -471,6 +463,85 @@ class MongeJetFitterTest(SurfacePolyFitTest):
             self.assertTrue(
                 _np.all(result["c"] == 0.0)
             )
+
+    def test_fit_all_bounding_area(self):
+        from trimesh.primitives import Capsule
+        from surface_poly_fit._spf_cgal import PolyhedralSurface, MongeJetFitter
+
+        trimesh_mesh = Capsule()
+        poly_surface = PolyhedralSurface(vertices=trimesh_mesh.vertices, faces=trimesh_mesh.faces)
+
+        degree_monge = 2
+        degree_poly_fit = 2
+        fitter = MongeJetFitter(poly_surface, degree_poly_fit, degree_monge)
+        results = []
+        for nr in [2, 4, 8, 16]:
+            results.append(fitter.fit_all(num_rings=nr))
+        for i in 0, 1, 2, 3:
+            self.assertTrue(
+                _np.all(
+                    results[i]["poly_fit_bounding_area"]["ellipse_min_radius"]
+                    <=
+                    results[i]["poly_fit_bounding_area"]["ellipse_max_radius"]
+                )
+            )
+            self.assertTrue(
+                _np.all(
+                    results[i]["poly_fit_bounding_area"]["rectangle_min_side_length"]
+                    <=
+                    results[i]["poly_fit_bounding_area"]["rectangle_max_side_length"]
+                )
+            )
+            self.assertTrue(
+                _np.all(
+                    results[i]["poly_fit_bounding_area"]["ellipse_min_radius"]
+                    <=
+                    results[i]["poly_fit_bounding_area"]["circle_radius"]
+                )
+            )
+            self.assertTrue(
+                _np.all(
+                    results[i]["poly_fit_bounding_area"]["ellipse_max_radius"]
+                    <=
+                    results[i]["poly_fit_bounding_area"]["circle_radius"]
+                )
+            )
+            if i > 0:
+                self.assertTrue(
+                    _np.all(
+                        results[i]["poly_fit_bounding_area"]["circle_radius"]
+                        >
+                        results[i - 1]["poly_fit_bounding_area"]["circle_radius"]
+                    )
+                )
+                self.assertTrue(
+                    _np.all(
+                        results[i]["poly_fit_bounding_area"]["ellipse_min_radius"]
+                        >
+                        results[i - 1]["poly_fit_bounding_area"]["ellipse_min_radius"]
+                    )
+                )
+                self.assertTrue(
+                    _np.all(
+                        results[i]["poly_fit_bounding_area"]["ellipse_max_radius"]
+                        >
+                        results[i - 1]["poly_fit_bounding_area"]["ellipse_max_radius"]
+                    )
+                )
+                self.assertTrue(
+                    _np.all(
+                        results[i]["poly_fit_bounding_area"]["rectangle_min_side_length"]
+                        >
+                        results[i - 1]["poly_fit_bounding_area"]["rectangle_min_side_length"]
+                    )
+                )
+                self.assertTrue(
+                    _np.all(
+                        results[i]["poly_fit_bounding_area"]["rectangle_max_side_length"]
+                        >
+                        results[i - 1]["poly_fit_bounding_area"]["rectangle_max_side_length"]
+                    )
+                )
 
 
 __all__ = [s for s in dir() if not s.startswith('_')]

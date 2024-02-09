@@ -23,6 +23,21 @@ typedef MongeFitter::MongeFormStlVec MongeFormStlVec;
 typedef MongeFitter::MongeFormStlVecPtr MongeFormStlVecPtr;
 
 
+struct BoundingAreaNumpy: public MongeFitter::BoundingArea
+{
+public:
+  BoundingAreaNumpy() :
+    MongeFitter::BoundingArea()
+  {
+  }
+
+  BoundingAreaNumpy(MongeFitter::BoundingArea const & ba) :
+    MongeFitter::BoundingArea(ba)
+  {
+  }
+
+};
+
 struct ResidualStatsNumpy: public MongeFitter::ResidualStats
 {
 public:
@@ -69,6 +84,7 @@ struct MongeFormNumpy
     }
 
     this->poly_fit_residual_stats = ResidualStatsNumpy(mf.fitting_residual_stats_);
+    this->poly_fit_bounding_area = BoundingAreaNumpy(mf.fitting_bounding_area_);
 
     for (std::size_t i = 0; i < 3; ++i)
     {
@@ -137,6 +153,7 @@ struct MongeFormNumpy
   Array3 pca_eigenvalues;
   Array3x3 poly_fit_basis;
   ResidualStatsNumpy poly_fit_residual_stats;
+  BoundingAreaNumpy poly_fit_bounding_area;
   Array3 origin;
   Array3x3 direction;
   Array2 k;
@@ -244,6 +261,15 @@ protected:
 void export_monge_jet_fitter(pybind11::module_ m)
 {
   PYBIND11_NUMPY_DTYPE(
+      BoundingAreaNumpy,
+      rectangle_min_side_length,
+      rectangle_max_side_length,
+      circle_radius,
+      ellipse_min_radius,
+      ellipse_max_radius
+  );
+
+  PYBIND11_NUMPY_DTYPE(
       ResidualStatsNumpy,
       min,
       max,
@@ -264,6 +290,7 @@ void export_monge_jet_fitter(pybind11::module_ m)
       pca_eigenvalues,
       poly_fit_basis,
       poly_fit_residual_stats,
+      poly_fit_bounding_area,
       origin,
       direction,
       k,
