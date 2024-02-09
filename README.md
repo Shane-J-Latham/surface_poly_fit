@@ -6,7 +6,7 @@ via [Monge Jet Fitting](https://doc.cgal.org/latest/Jet_fitting_3/classCGAL_1_1M
 
 ## Quick Start
 
-```
+```python
 import meshio
 from surface_poly_fit import PolyhedralSurface, MongeJetFitter
 
