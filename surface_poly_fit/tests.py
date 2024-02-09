@@ -173,9 +173,7 @@ class PolyhedralSurfaceTest(SurfacePolyFitTest):
         self.assertEqual(124, patch_surface.num_faces)
 
     def test_vertex_normals(self):
-        # import trimesh
         poly_surface = create_monge_surface()
-        self.export_mesh("monge_poly_surface.ply", poly_surface)
         poly_surface_nrmls = poly_surface.get_vertex_normals()
         for nrml in poly_surface_nrmls:
             self.logger.debug("nrml=%s", nrml.tolist())
@@ -183,9 +181,7 @@ class PolyhedralSurfaceTest(SurfacePolyFitTest):
             self.assertAlmostEqual(1.0, _np.linalg.norm(nrml))
 
     def test_face_normals(self):
-        # import trimesh
         poly_surface = create_monge_surface()
-        self.export_mesh("monge_poly_surface.ply", poly_surface)
         poly_surface_nrmls = poly_surface.get_face_normals()
         for nrml in poly_surface_nrmls:
             self.logger.debug("nrml=%s", nrml.tolist())
@@ -318,8 +314,6 @@ class MongeJetFitterTest(SurfacePolyFitTest):
             poly_surface.get_vertices()[:, 2].min(),
             poly_surface.get_vertices()[:, 2].max(),
         )
-        # tmesh = \
-        #    trimesh.Trimesh(vertices=poly_surface.get_vertices(), faces=poly_surface.get_faces())
         # self.export_mesh("monge_poly_surface.ply", poly_surface)
 
         monge_origin_vertex_index = poly_surface.num_vertices // 2
