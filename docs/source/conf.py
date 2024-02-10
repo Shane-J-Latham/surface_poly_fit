@@ -24,7 +24,7 @@ on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 have_rtd_theme = False
 rtd_theme_path = None
-if (not on_rtd) and (not have_rtd_theme):
+if not have_rtd_theme:
     try:
         import sphinx_rtd_theme
         have_rtd_theme = True
@@ -178,15 +178,11 @@ rtd_html_theme_options = \
         'collapse_navigation': False,
         'display_version': True,
     }
-if not on_rtd:
-    html_theme = 'nature'
-    if have_rtd_theme:
-        html_theme = "sphinx_rtd_theme"
-        if rtd_theme_path is not None:
-            html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
-        html_theme_options.update(rtd_html_theme_options)
-else:
-    html_theme = 'default'
+html_theme = 'nature'
+if have_rtd_theme:
+    html_theme = "sphinx_rtd_theme"
+    if rtd_theme_path is not None:
+        html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
     html_theme_options.update(rtd_html_theme_options)
 
 # Add any paths that contain custom themes here, relative to this directory.
@@ -437,9 +433,9 @@ epub_exclude_files = ['search.html']
 # Example configuration for intersphinx: refer to the Python standard library.
 #intersphinx_mapping = {'https://docs.python.org/': None}
 intersphinx_mapping = {
-    'python'    : ('http://docs.python.org/3', None),
-    'numpy'     : ('http://docs.scipy.org/doc/numpy/', None),
-    'trimesh'   : ('http://trimesh.org/', None),
+    'python'    : ('https://docs.python.org/3', None),
+    'numpy'     : ('https://numpy.org/doc/stable/', None),
+    'trimesh'   : ('https://trimesh.org/', None),
 }
 intersphinx_cache_limit=30
 
@@ -457,7 +453,8 @@ autoclass_content = "class" # classes should include just the class docstring.
 
 def setup(app: Sphinx):
     import sphinx
-    # from m2r2 source code to make `mdinclude` work
+    # from m2r source code to make `mdinclude` work,
+    # but still use myst_parser for parsing Markdown
     app.add_config_value('no_underscore_emphasis', False, 'env')
     app.add_config_value('m2r_parse_relative_links', False, 'env')
     app.add_config_value('m2r_anonymous_references', False, 'env')
