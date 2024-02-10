@@ -109,18 +109,24 @@ public:
     ResidualStats() :
       min(std::numeric_limits<LocalFloatType>::quiet_NaN()),
       max(std::numeric_limits<LocalFloatType>::quiet_NaN()),
-      max_abs(std::numeric_limits<LocalFloatType>::quiet_NaN()),
       mean(std::numeric_limits<LocalFloatType>::quiet_NaN()),
       median(std::numeric_limits<LocalFloatType>::quiet_NaN()),
+      min_abs(std::numeric_limits<LocalFloatType>::quiet_NaN()),
+      max_abs(std::numeric_limits<LocalFloatType>::quiet_NaN()),
+      mean_abs(std::numeric_limits<LocalFloatType>::quiet_NaN()),
+      median_abs(std::numeric_limits<LocalFloatType>::quiet_NaN()),
       stdd(std::numeric_limits<LocalFloatType>::quiet_NaN())
     {
     }
 
     LocalFloatType min;
     LocalFloatType max;
-    LocalFloatType max_abs;
     LocalFloatType mean;
     LocalFloatType median;
+    LocalFloatType min_abs;
+    LocalFloatType max_abs;
+    LocalFloatType mean_abs;
+    LocalFloatType median_abs;
     LocalFloatType stdd;
   };
 
@@ -413,19 +419,22 @@ public:
             boost::accumulators::tag::median,
             boost::accumulators::tag::variance
           >
-        > acc;
+        > sgn_acc, abs_acc;
 
       for (auto it = residuals.begin(); it != residuals.end(); ++it)
       {
-        acc(*it);
+        sgn_acc(*it);
+        abs_acc(std::fabs(*it));
       }
-      this->residual_stats_.min = boost::accumulators::min(acc);
-      this->residual_stats_.max = boost::accumulators::max(acc);
-      this->residual_stats_.max_abs =
-        std::max(std::fabs(this->residual_stats_.min), std::fabs(this->residual_stats_.max));
-      this->residual_stats_.mean = boost::accumulators::mean(acc);
-      this->residual_stats_.median = boost::accumulators::median(acc);
-      this->residual_stats_.stdd = std::sqrt(boost::accumulators::variance(acc));
+      this->residual_stats_.min = boost::accumulators::min(sgn_acc);
+      this->residual_stats_.max = boost::accumulators::max(sgn_acc);
+      this->residual_stats_.mean = boost::accumulators::mean(sgn_acc);
+      this->residual_stats_.median = boost::accumulators::median(sgn_acc);
+      this->residual_stats_.min_abs = boost::accumulators::min(abs_acc);
+      this->residual_stats_.max_abs = boost::accumulators::max(abs_acc);
+      this->residual_stats_.mean_abs = boost::accumulators::mean(abs_acc);
+      this->residual_stats_.median_abs = boost::accumulators::median(abs_acc);
+      this->residual_stats_.stdd = std::sqrt(boost::accumulators::variance(sgn_acc));
     }
 
     void solve_linear_system(LAMatrix &M, LAVector& Z)

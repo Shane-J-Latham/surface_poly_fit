@@ -273,9 +273,12 @@ void export_monge_jet_fitter(pybind11::module_ m)
       ResidualStatsNumpy,
       min,
       max,
-      max_abs,
       mean,
       median,
+      min_abs,
+      max_abs,
+      mean_abs,
+      median_abs,
       stdd
   );
 
@@ -397,7 +400,8 @@ void export_monge_jet_fitter(pybind11::module_ m)
         " See :ref:`fitting-basis-type-description`.\n"
         ":rtype: :obj:`numpy.ndarray`\n"
         ":return: A :samp:`(1,)` shaped `structured array <https://numpy.org/doc/stable/user/basics.rec.html>`_"
-        " containing fitting results.\n"
+        " containing fitting results."
+        " See :ref:`fitting-result-array-description`.\n"
      )
      .def(
          "fit_all",
@@ -415,7 +419,8 @@ void export_monge_jet_fitter(pybind11::module_ m)
          " See :ref:`fitting-basis-type-description`.\n"
          ":rtype: :obj:`numpy.ndarray`\n"
          ":return: A :samp:`(N,)` shaped `structured array <https://numpy.org/doc/stable/user/basics.rec.html>`_"
-         " containing fitting results.\n"
+         " containing fitting results."
+         " See :ref:`fitting-result-array-description`.\n"
       )
   ;
 
