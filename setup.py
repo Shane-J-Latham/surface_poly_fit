@@ -8,6 +8,6 @@ setup(
     cmdclass=versioneer.get_cmdclass(),
     zip_safe=False,
     packages=find_packages(),
-    # package_data={'surface_poly_fit': []},
+    package_data={'surface_poly_fit': ["*.txt"]},
     cmake_with_sdist=True
 )

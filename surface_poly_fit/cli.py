@@ -10,7 +10,7 @@ def read_polyhedral_surface(file_name):
 
     :type file_name: :obj:`str`
     :param file_name: Mesh file path.
-    :rtype: :obj:`surface_poly_fit.PolyhedralSurface`
+    :rtype: :obj:`surface_poly_fit.core.PolyhedralSurface`
     """
     import numpy as np
     import meshio
@@ -45,8 +45,8 @@ def write_result_array(output_file_name, result_ary, polyhedral_surface=None):
     :param output_file_name: Output file path for :func:`numpy.savez_compressed` file.
     :type result_ary: :obj:`numpy.ndarray`
     :param result_ary: Polynomial fitting result
-       array (e.g. as returned by :meth:`surface_poly_fit.MongeJetFitter.fit_all`).
-    :type polyhedral_surface: :obj:`surface_poly_fit.PolyhedralSurface`
+       array (e.g. as returned by :meth:`surface_poly_fit.core.MongeJetFitter.fit_all`).
+    :type polyhedral_surface: :obj:`surface_poly_fit.core.PolyhedralSurface`
     :param polyhedral_surface: If not :obj:`None`, write vertices, faces and vertex-normals
         the :samp:`.npz` file.
     """
@@ -75,7 +75,7 @@ def surface_poly_fit_cli(args):
 
     :type args: :obj:`types.SimpleNamespace`
     :param args: Parsed command line arguments (e.g. as returned
-       by :samp:`surface_poly_fit.get_argument_parser().parse_args()`.
+       by :samp:`surface_poly_fit.cli.get_argument_parser().parse_args()`.
     """
     import logging
     import os
@@ -120,7 +120,7 @@ def get_argument_parser():
     """
     Returns a :obj:`argparse.ArgumentParser` to handle command line option processing.
 
-    :rtype :obj:`argparse.ArgumentParser`
+    :rtype: :obj:`argparse.ArgumentParser`
     :return: Argument parser.
     """
     import argparse

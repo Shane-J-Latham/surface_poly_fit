@@ -1,3 +1,12 @@
+<!-- Badges-Start-->
+
+<!-- Badges-Finish-->
+
+
+
+
+
+
 # `surface_poly_fit`
 
 Python package for fitting polynomials to mesh surface patches.
@@ -22,7 +31,7 @@ degree_poly_fit = 2  # Degree of fitting polynomial
 degree_monge = 2  # Degree of Monge polynomial
 fitter = MongeJetFitter(polyhedral_surface, degree_poly_fit, degree_monge)
 
-# Fit a polynomial in the 4-ring neighbourhood of a single vertex.
+# Fit a polynomial to the vertices in the 4-ring neighbourhood of a single vertex.
 # Number of rings (num_rings) is the number of mesh-edge-hops,
 # the more rings, the larger the surface patch.
 result_array_vtk = fitter.fit_at_vertex(polyhedral_surface.num_vertices // 2, num_rings=4)
@@ -30,7 +39,7 @@ result_array_vtk = fitter.fit_at_vertex(polyhedral_surface.num_vertices // 2, nu
 # Fit a polynomial in the 4-ring neighbourhood of each vertex.
 result_array = fitter.fit_all(num_rings=4)
 
-# Principle curvatures at all vertices:
+# Principle curvatures for all vertices of the surface-mesh:
 result_array["k"]
 ```
 
