@@ -1,0 +1,4 @@
+mistune<1
+m2r
+sphinx-argparse
+sphinx_rtd_theme
