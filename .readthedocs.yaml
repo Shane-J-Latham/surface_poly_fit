@@ -11,9 +11,7 @@ build:
   tools:
     python: "3.10"
   apt_packages:
-    - libclang
     - cmake
-    - libspatialindex-dev
     - libeigen3-dev
     - libboost-all-dev
     - libcgal-dev
