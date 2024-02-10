@@ -298,43 +298,124 @@ void export_monge_jet_fitter(pybind11::module_ m)
       c
   );
 
-  py::class_<MongeJetFitterPy> mjf_class(m, "MongeJetFitter");
+  py::class_<MongeJetFitterPy> mjf_class(
+      m,
+      "MongeJetFitter"
+  );
 
-  py::enum_<MongeFitter::FittingBasisType>(mjf_class, "FittingBasisType")
-    .value("PCA", MongeFitter::FittingBasisType::PCA)
-    .value("VERTEX_NORMAL", MongeFitter::FittingBasisType::VERTEX_NORMAL)
-    .value("RING_NORMAL_MEAN", MongeFitter::FittingBasisType::RING_NORMAL_MEAN)
-    .value("RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN", MongeFitter::FittingBasisType::RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN)
-    .value("RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN_SIGMA", MongeFitter::FittingBasisType::RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN_SIGMA)
-    .export_values();
+  py::enum_<MongeFitter::FittingBasisType>(
+    mjf_class,
+    "FittingBasisType",
+    "How the polynomial fitting coordinate system (fitting-basis) is calculated"
+    " for a polyhedral-surface-patch."
+  )
+    .value(
+        "PCA", MongeFitter::FittingBasisType::PCA,
+        "Uses Principal Component Analysis of the patch coordinates"
+        " with the smallest component assigned to the :math:`z` direction"
+        " and the largest component the :math:`x` direction."
+    )
+    .value(
+        "VERTEX_NORMAL", MongeFitter::FittingBasisType::VERTEX_NORMAL,
+        "Use the vertex-normal as the polynomial fitting coordinate system :math:`z` direction."
+    )
+    .value(
+        "RING_NORMAL_MEAN", MongeFitter::FittingBasisType::RING_NORMAL_MEAN,
+        "Use mean of all surface-patch vertex-normals as the polynomial fitting coordinate system :math:`z` direction."
+    )
+    .value(
+        "RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN", MongeFitter::FittingBasisType::RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN,
+        "Use a Gaussian-weighted-mean of all surface-patch vertex-normals as the polynomial fitting coordinate system :math:`z` direction."
+        " The sigma used for calculating the Gaussian weights is :samp:`num_rings / 3.0`."
+
+    )
+    .value(
+        "RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN_SIGMA", MongeFitter::FittingBasisType::RING_NORMAL_GAUSSIAN_WEIGHTED_MEAN_SIGMA,
+        "Use a Gaussian-weighted-mean of all surface-patch vertex-normals as the polynomial fitting coordinate system :math:`z` direction."
+        " The sigma used for calculating the Gaussian weights is :attr:`MongeJetFitter.ring_normal_gaussian_sigma`."
+    )
+    .export_values()
+    ;
 
   mjf_class
     .def(
         py::init<py::object, std::size_t, std::size_t>(),
         py::arg("poly_surface"),
         py::arg("degree_poly_fit")=2,
-        py::arg("degree_monge")=2
+        py::arg("degree_monge")=2,
+        "Construct.\n\n"
+        ":type poly_surface: :obj:`PolyhedralSurface`\n"
+        ":param poly_surface: Fit polynomial surfaces to sub-patches of this surface mesh.\n"
+        ":type degree_poly_fit: :obj:`int`\n"
+        ":param degree_poly_fit: The degree (highest exponent) of the fitting polynomial."
+        " :samp:`{degree_poly_fit} >= 1`.\n"
+        ":type degree_monge: :obj:`int`\n"
+        ":param degree_monge: The degree (highest exponent) of the Monge polynomial."
+        " :samp:`1 <= {degree_monge} <= {degree_poly_fit} <= 4`.\n"
     )
-    .def_property_readonly("degree_poly_fit", &MongeJetFitterPy::get_degree_poly_fit)
-    .def_property_readonly("degree_monge", &MongeJetFitterPy::get_degree_monge)
-    .def_property_readonly("min_num_fit_points", &MongeJetFitterPy::get_min_num_fit_points)
+    .def_property_readonly(
+        "degree_poly_fit",
+        &MongeJetFitterPy::get_degree_poly_fit,
+        "An :obj:`int` indicating the *degree* of the fitting polynomial.\n"
+    )
+    .def_property_readonly(
+        "degree_monge",
+        &MongeJetFitterPy::get_degree_monge,
+        "An :obj:`int` indicating the *degree* of the Monge polynomial.\n"
+    )
+    .def_property_readonly(
+        "min_num_fit_points",
+        &MongeJetFitterPy::get_min_num_fit_points,
+        "An :obj:`int` indicating the minimum number of points (vertex coordinates)"
+        " required to fit a polynomial of degree :attr:`degree_poly_fit`.\n"
+    )
     .def_property(
       "ring_normal_gaussian_sigma",
       &MongeJetFitterPy::get_ring_normal_gaussian_sigma,
-      &MongeJetFitterPy::set_ring_normal_gaussian_sigma
+      &MongeJetFitterPy::set_ring_normal_gaussian_sigma,
+      "The *sigma* :obj:`float` value used to calculate Gaussian weights"
+      " when determining the polynomial fitting basis :math:`z` direction.\n"
     )
     .def(
         "fit_at_vertex",
         &MongeJetFitterPy::fit_at_vertex,
         py::arg("vertex_index"),
         py::arg("num_rings")=1,
-        py::arg("fit_basis_type")=MongeFitter::FittingBasisType::VERTEX_NORMAL
+        py::arg("fit_basis_type")=MongeFitter::FittingBasisType::VERTEX_NORMAL,
+        "Fits a polynomial surface to the neigbourhood of vertices of vertex"
+        " with index :samp:`{vertex_index}`.\n\n"
+        ":type vertex_index: :obj:`int`\n"
+        ":param vertex_index: Fit polynomial to neighbourhood vertices of"
+        " this vertex.\n"
+        ":type num_rings: :obj:`int`\n"
+        ":param num_rings: Size the neighbourhood. Vertices within :samp:`{num_rings}`"
+        " edge-hops of the :samp:`vertex_index` vertex are used in the polynomial-surface"
+        " fitting.\n"
+        ":type fit_basis_type: :obj:`MongeJetFitter.FittingBasisType`\n"
+        ":param fit_basis_type: This specifies the method used to calculate"
+        " the :math:`z` direction of the *fitting coordinate system*."
+        " See :ref:`fitting-basis-type-description`.\n"
+        ":rtype: :obj:`numpy.ndarray`\n"
+        ":return: A :samp:`(1,)` shaped `structured array <https://numpy.org/doc/stable/user/basics.rec.html>`_"
+        " containing fitting results.\n"
      )
      .def(
          "fit_all",
          &MongeJetFitterPy::fit_all,
          py::arg("num_rings")=1,
-         py::arg("fit_basis_type")=MongeFitter::FittingBasisType::VERTEX_NORMAL
+         py::arg("fit_basis_type")=MongeFitter::FittingBasisType::VERTEX_NORMAL,
+         "Fits a polynomial surface to the neigbourhoods of all vertices.\n\n"
+         ":type num_rings: :obj:`int`\n"
+         ":param num_rings: Size the neighbourhood. Vertices within :samp:`{num_rings}`"
+         " edge-hops of the :samp:`vertex_index` vertex are used in the polynomial-surface"
+         " fitting.\n"
+         ":type fit_basis_type: :obj:`MongeJetFitter.FittingBasisType`\n"
+         ":param fit_basis_type: This specifies the method used to calculate"
+         " the :math:`z` direction of the *fitting coordinate system*."
+         " See :ref:`fitting-basis-type-description`.\n"
+         ":rtype: :obj:`numpy.ndarray`\n"
+         ":return: A :samp:`(N,)` shaped `structured array <https://numpy.org/doc/stable/user/basics.rec.html>`_"
+         " containing fitting results.\n"
       )
   ;
 

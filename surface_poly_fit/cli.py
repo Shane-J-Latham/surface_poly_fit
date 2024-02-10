@@ -14,7 +14,7 @@ def read_polyhedral_surface(file_name):
     """
     import numpy as np
     import meshio
-    from . import PolyhedralSurface
+    from .core import PolyhedralSurface
 
     mesh = meshio.read(file_name)
     faces = sum(list(np.asanyarray(cells.data).tolist() for cells in mesh.cells), list())
@@ -80,7 +80,7 @@ def surface_poly_fit_cli(args):
     import logging
     import os
     import numpy as np
-    from . import MongeJetFitter as Fitter
+    from .core import MongeJetFitter as Fitter
 
     logging.basicConfig(level=getattr(logging, args.log_level))
     logger = logging.getLogger()

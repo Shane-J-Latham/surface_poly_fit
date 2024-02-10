@@ -1,7 +1,7 @@
 <!-- Badges-Start-->
-
+![Python Test](https://github.com/Shane-J-Latham/surface_poly_fit/actions/workflows/python-test.yml/badge.svg)
+![Python Test (vcpkg build)](https://github.com/Shane-J-Latham/surface_poly_fit/actions/workflows/python-test-vcpkg.yml/badge.svg)
 <!-- Badges-Finish-->
-
 
 
 
@@ -34,7 +34,7 @@ fitter = MongeJetFitter(polyhedral_surface, degree_poly_fit, degree_monge)
 # Fit a polynomial to the vertices in the 4-ring neighbourhood of a single vertex.
 # Number of rings (num_rings) is the number of mesh-edge-hops,
 # the more rings, the larger the surface patch.
-result_array_vtk = fitter.fit_at_vertex(polyhedral_surface.num_vertices // 2, num_rings=4)
+result_array_vtx = fitter.fit_at_vertex(polyhedral_surface.num_vertices // 2, num_rings=4)
 
 # Fit a polynomial in the 4-ring neighbourhood of each vertex.
 result_array = fitter.fit_all(num_rings=4)

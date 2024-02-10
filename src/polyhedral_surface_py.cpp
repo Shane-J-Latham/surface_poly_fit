@@ -286,20 +286,83 @@ PolyhedralSurfacePy::PolyhedralSurfacePyPtr PolyhedralSurfacePy::create_ring_pat
 /// Export PolyhedralSurfacePy class to specified python module.
 void export_polyhedral_surface(pybind11::module_ m)
 {
-  py::class_<PolyhedralSurfacePy>(m, "PolyhedralSurface")
-    .def(py::init<>())
-    .def(py::init<py::object, py::object>(), py::arg("vertices"), py::arg("faces"))
-    .def_property_readonly("num_vertices", &PolyhedralSurfacePy::get_num_vertices)
-    .def_property_readonly("num_faces", &PolyhedralSurfacePy::get_num_faces)
-    .def("get_vertices", &PolyhedralSurfacePy::get_vertices)
-    .def("get_vertex_normals", &PolyhedralSurfacePy::get_vertex_normals)
-    .def("set_vertex_normals", &PolyhedralSurfacePy::set_vertex_normals)
-    .def("get_faces", &PolyhedralSurfacePy::get_faces)
-    .def("get_face_normals", &PolyhedralSurfacePy::get_face_normals)
+  py::class_<PolyhedralSurfacePy> ps_cls(m, "PolyhedralSurface", "A mesh consisting of polygonal faces.");
+
+  ps_cls
+    .def(py::init<>(), "Default construction, no vertices, no faces.")
+    .def(
+        py::init<py::object, py::object>(),
+        py::arg("vertices"),
+        py::arg("faces"),
+        "Construct, specify vertices and faces.\n\n"
+        ":type vertices: :obj:`numpy.ndarray`\n"
+        ":param vertices: A :samp:`(N, 3)` shaped array of vertex coordinates.\n"
+        ":type faces: :obj:`list` of :obj:`list`\n"
+        ":param faces: Each element of :samp:`{faces}` is an *ordered* sequence"
+        " of vertex indices defining a face.\n"
+    )
+    .def_property_readonly(
+        "num_vertices",
+        &PolyhedralSurfacePy::get_num_vertices,
+        "An :obj:`int` indicating the number of vertices in this polyhedral surface.\n"
+    )
+    .def_property_readonly(
+        "num_faces",
+        &PolyhedralSurfacePy::get_num_faces,
+        "An :obj:`int` indicating the number of faces in this polyhedral surface.\n"
+    )
+    .def(
+        "get_vertices",
+        &PolyhedralSurfacePy::get_vertices,
+        "Returns the vertex coordinates of this polyhedral surface.\n\n"
+        ":rtype: :obj:`numpy.ndarray`\n"
+        ":return: A :samp:`(N, 3)` shaped :obj:`numpy.ndarray` of coordinates.\n"
+    )
+    .def(
+        "get_vertex_normals",
+        &PolyhedralSurfacePy::get_vertex_normals,
+        "Returns the vertex normals of this polyhedral surface.\n\n"
+        ":rtype: :obj:`numpy.ndarray`\n"
+        ":return: A :samp:`(N, 3)` shaped :obj:`numpy.ndarray` of normals.\n"
+    )
+    .def(
+        "set_vertex_normals",
+        &PolyhedralSurfacePy::set_vertex_normals,
+        py::arg("normals"),
+        "Sets vertex normals.\n\n"
+        ":type normals: :obj:`numpy.ndarray`\n"
+        ":param normals: A :samp:`(N, 3)` shaped :obj:`numpy.ndarray`"
+        " of vertex-normals. The :samp:`{normals}[i]` direction is assigned"
+        " to vertex :samp:`i`.\n"
+    )
+    .def(
+        "get_faces",
+        &PolyhedralSurfacePy::get_faces,
+        "Returns the faces of this polyhedral surface.\n\n"
+        ":rtype: :obj:`list`\n"
+        ":return: Each element of the returned list is an *ordered* sequence of"
+        " vertex integers indicating the vertices (vertex indexes) which form"
+        " the face."
+    )
+    .def(
+        "get_face_normals",
+        &PolyhedralSurfacePy::get_face_normals,
+        "Returns the face normals of this polyhedral surface.\n\n"
+        ":rtype: :obj:`numpy.ndarray`\n"
+        ":return: A :samp:`(N, 3)` shaped :obj:`numpy.ndarray` of normals.\n"
+    )
     .def(
         "create_ring_patch",
         &PolyhedralSurfacePy::create_ring_patch,
-        py::arg("vertex_index"), py::arg("num_rings")
+        py::arg("vertex_index"), py::arg("num_rings"),
+        "Creates a polyhedral surface patch about a specified vertex.\n\n"
+        ":type vertex_index: :obj:`int`\n"
+        ":param vertex_index: The index of the vertex about which the patch is created.\n"
+        ":type num_rings: :obj:`int`\n"
+        ":param num_rings: The number of edge-hops from vertex :samp:`{vertex_index}`"
+        " used to form the patch.\n"
+        ":rtype: :obj:`PolyhedralSurface`\n"
+        ":return: A new instance :obj:`PolyhedralSurface` patch.\n"
     )
   ;
 }
