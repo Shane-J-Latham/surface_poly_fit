@@ -2,9 +2,9 @@
 ![ReadTheDocs](https://readthedocs.org/projects/surface-poly-fit/badge/?version=latest&style=plastic)
 ![Python Test](https://github.com/Shane-J-Latham/surface_poly_fit/actions/workflows/python-test.yml/badge.svg)
 ![Python Test (vcpkg build)](https://github.com/Shane-J-Latham/surface_poly_fit/actions/workflows/python-test-vcpkg.yml/badge.svg)
+![Release](https://img.shields.io/github/v/release/Shane-J-Latham/surface_poly_fit.svg?style=flat)
+[![GitHub version](https://badge.fury.io/gh/Shane-J-Latham%2Fsurface_poly_fit.svg)](https://badge.fury.io/gh/Shane-J-Latham%2Fsurface_poly_fit)
 <!-- Badges-Finish-->
-
-
 
 
 # `surface_poly_fit`
