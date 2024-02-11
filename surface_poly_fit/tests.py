@@ -60,7 +60,7 @@ class PolyhedralSurfaceTest(SurfacePolyFitTest):
 
     def test_construct(self):
         from trimesh.primitives import Capsule
-        from surface_poly_fit._spf_cgal import PolyhedralSurface
+        from surface_poly_fit.core import PolyhedralSurface
 
         self.assertIsNotNone(PolyhedralSurface())
         trimesh_mesh = Capsule()
@@ -131,7 +131,7 @@ class PolyhedralSurfaceTest(SurfacePolyFitTest):
 
     def test_set_vertex_normals(self):
         from trimesh.primitives import Capsule
-        from surface_poly_fit._spf_cgal import PolyhedralSurface
+        from surface_poly_fit.core import PolyhedralSurface
 
         trimesh_mesh = Capsule()
         poly_surf = PolyhedralSurface(vertices=trimesh_mesh.vertices, faces=trimesh_mesh.faces)
@@ -239,7 +239,7 @@ def create_monge_surface(monge_polynomial=None, xy=None):
     """
     """
     from scipy.spatial import Delaunay
-    from surface_poly_fit._spf_cgal import PolyhedralSurface
+    from surface_poly_fit.core import PolyhedralSurface
 
     if monge_polynomial is None:
         monge_polynomial = \
@@ -269,7 +269,7 @@ class MongeJetFitterTest(SurfacePolyFitTest):
 
     def test_construct(self):
         from trimesh.primitives import Capsule
-        from surface_poly_fit._spf_cgal import PolyhedralSurface, MongeJetFitter
+        from surface_poly_fit.core import PolyhedralSurface, MongeJetFitter
 
         trimesh_mesh = Capsule()
         poly_surf = PolyhedralSurface(vertices=trimesh_mesh.vertices, faces=trimesh_mesh.faces)
@@ -285,7 +285,7 @@ class MongeJetFitterTest(SurfacePolyFitTest):
 
     def test_properties(self):
         from trimesh.primitives import Capsule
-        from surface_poly_fit._spf_cgal import PolyhedralSurface, MongeJetFitter
+        from surface_poly_fit.core import PolyhedralSurface, MongeJetFitter
 
         trimesh_mesh = Capsule()
         poly_surf = PolyhedralSurface(vertices=trimesh_mesh.vertices, faces=trimesh_mesh.faces)
@@ -299,7 +299,7 @@ class MongeJetFitterTest(SurfacePolyFitTest):
 
     def test_fit(self):
         # import trimesh
-        from surface_poly_fit._spf_cgal import MongeJetFitter
+        from surface_poly_fit.core import MongeJetFitter
 
         monge_polynomial = \
             MongePolynomial(
@@ -364,7 +364,7 @@ class MongeJetFitterTest(SurfacePolyFitTest):
     def test_oriented_fit(self):
         import trimesh
         from scipy.spatial.transform import Rotation
-        from surface_poly_fit._spf_cgal import MongeJetFitter, PolyhedralSurface
+        from surface_poly_fit.core import MongeJetFitter, PolyhedralSurface
 
         monge_polynomial = \
             MongePolynomial(
@@ -436,7 +436,7 @@ class MongeJetFitterTest(SurfacePolyFitTest):
 
     def test_fit_all(self):
         # import trimesh
-        from surface_poly_fit._spf_cgal import MongeJetFitter
+        from surface_poly_fit.core import MongeJetFitter
 
         poly_surface = create_monge_surface()
 
@@ -460,7 +460,7 @@ class MongeJetFitterTest(SurfacePolyFitTest):
 
     def test_fit_all_bounding_area(self):
         from trimesh.primitives import Capsule
-        from surface_poly_fit._spf_cgal import PolyhedralSurface, MongeJetFitter
+        from surface_poly_fit.core import PolyhedralSurface, MongeJetFitter
 
         trimesh_mesh = Capsule()
         poly_surface = PolyhedralSurface(vertices=trimesh_mesh.vertices, faces=trimesh_mesh.faces)

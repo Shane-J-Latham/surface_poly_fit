@@ -282,6 +282,20 @@ PolyhedralSurfacePy::PolyhedralSurfacePyPtr PolyhedralSurfacePy::create_ring_pat
   return ret_psp_ptr;
 }
 
+py::object PolyhedralSurfacePy::create_child_ring_patch(
+    const std::int64_t vertex_index,
+    const std::int64_t num_rings,
+    py::object child_cls
+)
+{
+  PolyhedralSurface::PolyhedralSurfacePtr ps_ptr = this->surface_->create_ring_patch(vertex_index, num_rings);
+
+  py::object ret_ps_obj = child_cls();
+  PolyhedralSurfacePy & ret_ps = py::cast<PolyhedralSurfacePy &>(ret_ps_obj);
+  ret_ps.surface_.swap(ps_ptr);
+
+  return ret_ps_obj;
+}
 
 /// Export PolyhedralSurfacePy class to specified python module.
 void export_polyhedral_surface(pybind11::module_ m)
@@ -363,6 +377,22 @@ void export_polyhedral_surface(pybind11::module_ m)
         " used to form the patch.\n"
         ":rtype: :obj:`PolyhedralSurface`\n"
         ":return: A new instance :obj:`PolyhedralSurface` patch.\n"
+    )
+    .def(
+        "_create_child_ring_patch",
+        &PolyhedralSurfacePy::create_child_ring_patch,
+        py::arg("vertex_index"), py::arg("num_rings"), py::arg("child_class"),
+        "Creates a polyhedral surface patch about a specified vertex.\n\n"
+        ":type vertex_index: :obj:`int`\n"
+        ":param vertex_index: The index of the vertex about which the patch is created.\n"
+        ":type num_rings: :obj:`int`\n"
+        ":param num_rings: The number of edge-hops from vertex :samp:`{vertex_index}`"
+        " used to form the patch.\n"
+        ":type child_class: :obj:`object`\n"
+        ":param child_class: The return instance type (must inherit from"
+        " :obj:`surface_poly_fit._spf_cgal.PolyhedralSurface)."
+        ":rtype: :samp:`{child_class}`\n"
+        ":return: A new instance of type :samp:`{child_class}` surface patch.\n"
     )
   ;
 }

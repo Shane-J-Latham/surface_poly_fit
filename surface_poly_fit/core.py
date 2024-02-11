@@ -44,7 +44,25 @@ class PolyhedralSurface(_PolyhedralSurface):
     """
     A mesh consisting of polygonal faces.
     """
-    pass
+    def create_ring_patch(self, vertex_index, num_rings):
+        """
+        Creates a polyhedral surface patch about a specified vertex.
+
+        :type vertex_index: :obj:`int`
+        :param vertex_index: The index of the vertex about which the patch is created.
+        :type num_rings: :obj:`int`
+        :param num_rings: The number of edge-hops from vertex :samp:`{vertex_index}`
+           used to form the patch.
+        :rtype: :obj:`PolyhedralSurface`
+        :return: A new instance :obj:`PolyhedralSurface` patch.
+        """
+
+        return \
+            self._create_child_ring_patch(
+                vertex_index=vertex_index,
+                num_rings=num_rings,
+                child_class=self.__class__
+            )
 
 
 class MongeJetFitter(_MongeJetFitter):

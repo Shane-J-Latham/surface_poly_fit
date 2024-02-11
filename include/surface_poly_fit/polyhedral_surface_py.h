@@ -39,6 +39,8 @@ public:
 
   PolyhedralSurfacePyPtr create_ring_patch(const std::int64_t vertex_index, const std::int64_t num_rings);
 
+  py::object create_child_ring_patch(const std::int64_t vertex_index, const std::int64_t num_rings, py::object child_class);
+
   PolyhedralSurfacePtr surface_;
 };
 
