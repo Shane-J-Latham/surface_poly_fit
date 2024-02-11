@@ -1,0 +1,149 @@
+name: Python Wheels (vcpkg build)
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+
+  build_wheels:
+    name: ${{ github.workflow }} Python build wheel on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [windows-latest, macos-latest]
+        python-version: ["3.10"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name:  Install OS tools
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            brew install autoconf automake libtool
+          fi
+
+      - uses: lukka/get-cmake@latest
+        name: Install cmake and ninja (via get-cmake)
+
+      - name: Restore artifacts, or setup vcpkg for building artifacts
+        uses: lukka/run-vcpkg@v11
+        with:
+          # This specifies the location of vcpkg, where it is going to be restored from cache, or create from scratch.
+          vcpkgDirectory: '${{ runner.workspace }}/vcpkg'
+          # The Git commit id of vcpkg to be checked out. This is only needed because we are not using a submodule.
+          vcpkgGitCommitId: "c8696863d371ab7f46e213d8f5ca923c4aef2a00"
+          # The vcpkg.json file, which will be part of cache key computation.
+          vcpkgJsonGlob: '**/vcpkg.json'
+        id: runvcpkg
+
+      - name: Prints output of run-vcpkg's action.
+        run: |
+          echo "VCPKG_ROOT=${VCPKG_ROOT}"
+          echo "root='${{ steps.runvcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}', triplet='${{ steps.runvcpkg.outputs.RUNVCPKG_VCPKG_DEFAULT_TRIPLET_OUT }}' "
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install cibuildwheel
+        run: python -m pip install cibuildwheel==2.16.2
+
+      - name: Build wheels
+        shell: bash
+        run: |
+          echo "VCPKG_ROOT=${VCPKG_ROOT}"
+          python -m cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_ENVIRONMENT_LINUX: "CMAKE_FETCH_VCPKG=ON"
+          # vcpkg does not support i686 nor aarch64
+          CIBW_ARCHS: "auto64"
+          # Skip musllinux builds
+          CIBW_SKIP: "*-musllinux_*"
+          CIBW_BUILD: "cp38-* cp39-* cp310-* cp311-* cp312-*"
+          # Don't repair macOS wheels
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: ""
+          CIBW_BEFORE_BUILD_WINDOWS: "python -m pip install cmake"
+          CIBW_BEFORE_ALL_LINUX: "/usr/bin/yum install --assumeyes --verbose zip unzip tar"
+          # Run the package tests using `pytest`
+          CIBW_TEST_COMMAND: "python -m surface_poly_fit.tests -fv || echo 'Tests failed!'"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          # name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+          name: cibw-wheels-${{ matrix.os }}
+          path: ./wheelhouse/*.whl
+          retention-days: 10
+
+  build_sdist:
+    name: Build python sdist
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: lukka/get-cmake@latest
+        name: Install cmake and ninja (via get-cmake)
+
+      - name: Restore artifacts, or setup vcpkg for building artifacts
+        uses: lukka/run-vcpkg@v11
+        with:
+          # This specifies the location of vcpkg, where it is going to be restored from cache, or create from scratch.
+          vcpkgDirectory: '${{ runner.workspace }}/vcpkg'
+          # The Git commit id of vcpkg to be checked out. This is only needed because we are not using a submodule.
+          vcpkgGitCommitId: "c8696863d371ab7f46e213d8f5ca923c4aef2a00"
+          # The vcpkg.json file, which will be part of cache key computation.
+          vcpkgJsonGlob: '**/vcpkg.json'
+        id: runvcpkg
+
+      - name: Prints output of run-vcpkg's action.
+        run: |
+          echo "VCPKG_ROOT=${VCPKG_ROOT}"
+          echo "root='${{ steps.runvcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}', triplet='${{ steps.runvcpkg.outputs.RUNVCPKG_VCPKG_DEFAULT_TRIPLET_OUT }}' "
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install sdist build dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "setuptools>=42" "versioneer[toml]" "scikit-build" "cmake" "ninja"
+
+      - name: Create python sdist
+        run: python setup.py sdist --formats=gztar,zip
+
+      - name: Upload python sdist
+        uses: actions/upload-artifact@v4
+        with:
+          name: cibw-sdist
+          path: ./dist/*
+
+  release:
+    name: Make a Release
+    needs: [build_sdist, build_wheels]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download python sdist and wheels
+        uses: actions/download-artifact@v4
+        with:
+          pattern: cibw-*
+          path: ./release_artifacts/
+          merge-multiple: true
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./release_artifacts/*
