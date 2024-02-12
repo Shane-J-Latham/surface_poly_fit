@@ -541,5 +541,6 @@ class MongeJetFitterTest(SurfacePolyFitTest):
 __all__ = [s for s in dir() if not s.startswith('_')]
 
 if __name__ == "__main__":
-    _logging.basicConfig(level=_logging.INFO)
+    logging_format = "%(asctime)s|%(process)-8s|%(name)-8s|%(levelname)-8s|%(message)s"
+    _logging.basicConfig(format=logging_format, level=_logging.INFO)
     _unittest.main(__name__)

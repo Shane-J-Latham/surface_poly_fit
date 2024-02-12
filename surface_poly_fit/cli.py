@@ -82,7 +82,8 @@ def surface_poly_fit_cli(args):
     import numpy as np
     from .core import MongeJetFitter as Fitter
 
-    logging.basicConfig(level=getattr(logging, args.log_level))
+    logging_format = '%(asctime)s|%(process)-8s|%(name)-8s|%(levelname)-8s|%(message)s'
+    logging.basicConfig(format=logging_format, level=getattr(logging, args.log_level))
     logger = logging.getLogger()
 
     output_file_name = args.output_file
