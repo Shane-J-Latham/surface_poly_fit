@@ -120,7 +120,7 @@ def surface_poly_fit_cli(args):
         )
     for num_rings in num_rings_list[1:]:
         logger.info("Fitting for num_rings=%s...", num_rings)
-        result_ary = np.hstack(fitter.fit_all(num_rings=num_rings))
+        result_ary = np.hstack((result_ary, fitter.fit_all(num_rings=num_rings)))
 
     logger.info("Writing fitting result to file %s...", output_file_name)
     write_result_array(output_file_name, result_ary, polyhedral_surface)
