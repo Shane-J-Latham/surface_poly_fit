@@ -14,42 +14,50 @@ class SurfacePolyFitTest(_unittest.TestCase):
 
     def setUp(self):
         """
+        Set-up, initialise logger.
         """
-        _np.random.seed(54317953)
-        # self.logger = logging.getLogger(__name__ + "." + self.__class__.__name__)
         self.logger = _logging.getLogger()
 
     def export_mesh(self, file_name, poly_surface):
         """
-        """
-        import trimesh
-        from trimesh.exchange.export import export_mesh
+        Export a :obj:`surface_poly_fit.core.PolyhedralSurface` to file.
 
-        self.logger.debug("vertices=%s", poly_surface.get_vertices())
-        self.logger.debug("faces=%s", poly_surface.get_faces())
-        mesh = \
-            trimesh.Trimesh(
-                vertices=poly_surface.get_vertices(),
-                faces=poly_surface.get_faces(),
-                process=False,
-                validate=False
-            )
-        export_mesh(mesh, file_name)
+        :type file_name: :obj:`str`
+        :param file_name: File path for mesh export.
+        :type poly_surface: :obj:`surface_poly_fit.core.PolyhedralSurface`
+        :param poly_surface: Mesh to export.
+        """
+        import meshio
+
+        mio_mesh = poly_surface.as_meshio_mesh()
+        meshio.write(file_name, mio_mesh)
 
 
 class SurfacePolyFitImportTest(SurfacePolyFitTest):
+    """
+    Basic import tests, make sure the pybind11 extension can be imported.
+    """
 
     def test_import_surface_poly_fit(self):
+        """
+        Test import of :mod:`surface_poly_fit` package.
+        """
         import surface_poly_fit
 
         self.assertIsNotNone(surface_poly_fit)
 
     def test_import_surface_poly_fit_spf_cgal(self):
+        """
+        Test import of pybind11 extension.
+        """
         from surface_poly_fit import _spf_cgal
 
         self.assertIsNotNone(_spf_cgal)
 
     def test_surface_poly_fit_spf_cgal_polyhedral_surface(self):
+        """
+        Test pybind11 class export (can construct an instance).
+        """
         from surface_poly_fit import _spf_cgal
 
         self.assertTrue(hasattr(_spf_cgal, "PolyhedralSurface"))
@@ -57,8 +65,14 @@ class SurfacePolyFitImportTest(SurfacePolyFitTest):
 
 
 class PolyhedralSurfaceTest(SurfacePolyFitTest):
+    """
+    Tests for :obj:`surface_poly_fit.core.PolyhedralSurface`.
+    """
 
     def test_construct(self):
+        """
+        Test default construction, construction with vertices and faces.
+        """
         from trimesh.primitives import Capsule
         from surface_poly_fit.core import PolyhedralSurface
 
@@ -130,6 +144,10 @@ class PolyhedralSurfaceTest(SurfacePolyFitTest):
         )
 
     def test_set_vertex_normals(self):
+        """
+        Test :meth:`surface_poly_fit.core.PolyhedralSurface.set_vertex_normals`
+        and :meth:`surface_poly_fit.core.PolyhedralSurface.get_vertex_normals`.
+        """
         from trimesh.primitives import Capsule
         from surface_poly_fit.core import PolyhedralSurface
 
@@ -142,6 +160,9 @@ class PolyhedralSurfaceTest(SurfacePolyFitTest):
         self.assertRaises(Exception, poly_surf.set_vertex_normals, trimesh_mesh.vertex_normals[1:])
 
     def test_create_ring_patch(self):
+        """
+        Test :meth:`surface_poly_fit.core.PolyhedralSurface.create_ring_patch`.
+        """
         poly_surface = create_monge_surface()
         origin_vertex_index = poly_surface.num_vertices // 2
         self.assertTrue(
@@ -173,6 +194,10 @@ class PolyhedralSurfaceTest(SurfacePolyFitTest):
         self.assertEqual(124, patch_surface.num_faces)
 
     def test_vertex_normals(self):
+        """
+        Test that :meth:`surface_poly_fit.core.PolyhedralSurface.get_vertex_normals`
+        normals are valid.
+        """
         poly_surface = create_monge_surface()
         poly_surface_nrmls = poly_surface.get_vertex_normals()
         for nrml in poly_surface_nrmls:
@@ -181,6 +206,10 @@ class PolyhedralSurfaceTest(SurfacePolyFitTest):
             self.assertAlmostEqual(1.0, _np.linalg.norm(nrml))
 
     def test_face_normals(self):
+        """
+        Test that :meth:`surface_poly_fit.core.PolyhedralSurface.get_face_normals`
+        normals are valid.
+        """
         poly_surface = create_monge_surface()
         poly_surface_nrmls = poly_surface.get_face_normals()
         for nrml in poly_surface_nrmls:
@@ -188,8 +217,59 @@ class PolyhedralSurfaceTest(SurfacePolyFitTest):
             self.assertTrue(_np.all(~_np.isnan(nrml)))
             self.assertAlmostEqual(1.0, _np.linalg.norm(nrml))
 
+    def test_to_meshio_mesh(self):
+        """
+        Test :meth:`surface_poly_fit.core.PolyhedralSurface.to_meshio_mesh`.
+        """
+        poly_surface = create_monge_surface()
+        mio_mesh = poly_surface.to_meshio_mesh()
+
+        self.assertSequenceEqual(
+            poly_surface.get_vertices().tolist(),
+            mio_mesh.points.tolist()
+        )
+        self.assertSequenceEqual(
+            poly_surface.get_faces().tolist(),
+            mio_mesh.cells[0].data.tolist()
+        )
+        self.assertSequenceEqual(
+            poly_surface.get_vertex_normals().tolist(),
+            mio_mesh.point_data["Normals"].tolist(),
+        )
+
+    def test_from_meshio_mesh(self):
+        """
+        Test :meth:`surface_poly_fit.core.PolyhedralSurface.from_meshio_mesh`.
+        """
+        from surface_poly_fit.core import PolyhedralSurface
+        poly_surface_orig = create_monge_surface()
+        mio_mesh = poly_surface_orig.to_meshio_mesh()
+        poly_surface_from_mio = PolyhedralSurface.from_meshio_mesh(mio_mesh)
+
+        self.assertSequenceEqual(
+            poly_surface_orig.get_vertices().tolist(),
+            poly_surface_from_mio.get_vertices().tolist(),
+        )
+        # Note: face order is only guaranteed to be preserved for single-degree face meshes
+        # i.e. all-triangle-face meshes, all-quad-face meshes.
+        self.assertSequenceEqual(
+            poly_surface_orig.get_faces().tolist(),
+            poly_surface_from_mio.get_faces().tolist()
+        )
+        self.assertSequenceEqual(
+            poly_surface_orig.get_vertex_normals().tolist(),
+            poly_surface_from_mio.get_vertex_normals().tolist(),
+        )
+        self.assertSequenceEqual(
+            poly_surface_orig.get_face_normals().tolist(),
+            poly_surface_from_mio.get_face_normals().tolist(),
+        )
+
 
 class MongePolynomial:
+    """
+    Evaluates Monge polynomial.
+    """
     def __init__(self, k, b, c):
         self._k = _np.asanyarray(k).copy()
         self._b = _np.asanyarray(b).copy()
@@ -197,17 +277,34 @@ class MongePolynomial:
 
     @property
     def k(self):
+        """
+        Principal curvature coefficients, a :samp:`(2,)` shaped :obj:`numpy.ndarray`.
+        """
         return self._k
 
     @property
     def b(self):
+        """
+        Curvature derivative coefficients, a :samp:`(4,)` shaped :obj:`numpy.ndarray`.
+        """
         return self._b
 
     @property
     def c(self):
+        """
+        Second order curvature derivative coefficients, a :samp:`(5,)` shaped :obj:`numpy.ndarray`.
+        """
         return self._c
 
     def evaluate(self, xy):
+        """
+        Evaluates polynomial at 2D coordinates :samp:`{xy}`.
+
+        :type xy: :obj:`numpy.ndarray`
+        :param xy: A :samp:`(N, 2)` shaped array of 2D coordinates.
+        :rtype: :obj:`numpy.ndarray`
+        :return: A :samp:`(N,)` shaped array of polynomial surface *heights*.
+        """
         xy = _np.asanyarray(xy)
         x = xy[:, 0]
         y = xy[:, 1]
@@ -232,11 +329,24 @@ class MongePolynomial:
         return z
 
     def __call__(self, xy):
+        """
+        See :meth:`evaluate`.
+        """
         return self.evaluate(xy)
 
 
 def create_monge_surface(monge_polynomial=None, xy=None):
     """
+    Create a Monge polynomial shaped :obj:`surface_poly_fit.core.PolyhedralSurface`.
+    Performs *Delaunay* triangulation of the :samp:`{xy}` coordinates to form
+    the triangular mesh faces.
+
+    :type monge_polynomial: :obj:`MongePolynomial`
+    :param monge_polynomial: Defines the polynomial surface.
+    :type xy: :obj:`numpy.ndarray`
+    :param xy: A :samp:`(N, 2)` shaped array of 2D coordinates at which polynomial is evaluated.
+    :rtype: :obj:`surface_poly_fit.core.PolyhedralSurface`
+    :return: A Monge polynomial :obj:`surface_poly_fit.core.PolyhedralSurface`.
     """
     from scipy.spatial import Delaunay
     from surface_poly_fit.core import PolyhedralSurface
@@ -266,8 +376,13 @@ def create_monge_surface(monge_polynomial=None, xy=None):
 
 
 class MongeJetFitterTest(SurfacePolyFitTest):
-
+    """
+    Tests for :obj:`surface_poly_fit.core.MongeJetFitter`.
+    """
     def test_construct(self):
+        """
+        Test :obj:`surface_poly_fit.core.MongeJetFitter` instance creation.
+        """
         from trimesh.primitives import Capsule
         from surface_poly_fit.core import PolyhedralSurface, MongeJetFitter
 
@@ -284,6 +399,9 @@ class MongeJetFitterTest(SurfacePolyFitTest):
         self.assertIsNotNone(fitter)
 
     def test_properties(self):
+        """
+        Test property get and set.
+        """
         from trimesh.primitives import Capsule
         from surface_poly_fit.core import PolyhedralSurface, MongeJetFitter
 
@@ -298,7 +416,9 @@ class MongeJetFitterTest(SurfacePolyFitTest):
         self.assertEqual(4.0, fitter.ring_normal_gaussian_sigma)
 
     def test_fit(self):
-        # import trimesh
+        """
+        Test :meth:`surface_poly_fit.core.MongeJetFitter.fit_at_vertex`.
+        """
         from surface_poly_fit.core import MongeJetFitter
 
         monge_polynomial = \
@@ -362,6 +482,10 @@ class MongeJetFitterTest(SurfacePolyFitTest):
             )
 
     def test_oriented_fit(self):
+        """
+        Test :meth:`surface_poly_fit.core.MongeJetFitter.fit_at_vertex` for
+        polynomial which is *not aligned to coordinate axes*.
+        """
         import trimesh
         from scipy.spatial.transform import Rotation
         from surface_poly_fit.core import MongeJetFitter, PolyhedralSurface
@@ -435,7 +559,9 @@ class MongeJetFitterTest(SurfacePolyFitTest):
             )
 
     def test_fit_all(self):
-        # import trimesh
+        """
+        Test :meth:`surface_poly_fit.core.MongeJetFitter.fit_all`.
+        """
         from surface_poly_fit.core import MongeJetFitter
 
         poly_surface = create_monge_surface()
@@ -459,6 +585,10 @@ class MongeJetFitterTest(SurfacePolyFitTest):
             )
 
     def test_fit_all_bounding_area(self):
+        """
+        Checks on the bounding-area (:samp:`"poly_fit_bounding_area"` field) results
+        returned by :meth:`surface_poly_fit.core.MongeJetFitter.fit_all`.
+        """
         from trimesh.primitives import Capsule
         from surface_poly_fit.core import PolyhedralSurface, MongeJetFitter
 

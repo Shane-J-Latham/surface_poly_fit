@@ -12,14 +12,11 @@ def read_polyhedral_surface(file_name):
     :param file_name: Mesh file path.
     :rtype: :obj:`surface_poly_fit.core.PolyhedralSurface`
     """
-    import numpy as np
     import meshio
     from .core import PolyhedralSurface
 
     mesh = meshio.read(file_name)
-    faces = sum(list(np.asanyarray(cells.data).tolist() for cells in mesh.cells), list())
-    ps = PolyhedralSurface(vertices=mesh.points, faces=faces)
-    return ps
+    return PolyhedralSurface.from_meshio_mesh(mesh)
 
 
 def write_result_array(output_file_name, result_ary, polyhedral_surface=None):
@@ -50,7 +47,12 @@ def write_result_array(output_file_name, result_ary, polyhedral_surface=None):
     :param polyhedral_surface: If not :obj:`None`, write vertices, faces and vertex-normals
         the :samp:`.npz` file.
     """
+    from pathlib import Path
     import numpy as np
+
+    output_file_path = Path(output_file_name)
+    if not output_file_path.parent.exists():
+        output_file_path.parent.mkdir(parents=True, exists_ok=True)
 
     vertices = None
     faces = None
@@ -61,7 +63,7 @@ def write_result_array(output_file_name, result_ary, polyhedral_surface=None):
         vertex_normals = polyhedral_surface.get_vertex_normals()
 
     np.savez_compressed(
-        output_file_name,
+        output_file_path,
         surface_poly_fit_results=result_ary,
         vertices=vertices,
         faces=faces,
@@ -95,6 +97,11 @@ def surface_poly_fit_cli(args):
     args.poly_fit_basis_type = MongeJetFitter.FittingBasisType.__members__[args.poly_fit_basis_type]
     logger.info("Reading mesh from file %s...", args.mesh_file)
     polyhedral_surface = read_polyhedral_surface(args.mesh_file)
+    logger.info(
+        "Mesh num_vertices=%8d, num_faces=%8d...",
+        polyhedral_surface.num_vertices,
+        polyhedral_surface.num_faces
+    )
     fitter = \
         Fitter(
             polyhedral_surface,

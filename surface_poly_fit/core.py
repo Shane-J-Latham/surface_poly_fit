@@ -44,6 +44,7 @@ class PolyhedralSurface(_PolyhedralSurface):
     """
     A mesh consisting of polygonal faces.
     """
+
     def create_ring_patch(self, vertex_index, num_rings):
         """
         Creates a polyhedral surface patch about a specified vertex.
@@ -63,6 +64,65 @@ class PolyhedralSurface(_PolyhedralSurface):
                 num_rings=num_rings,
                 child_class=self.__class__
             )
+
+    def to_meshio_mesh(self):
+        """
+        Return a :obj:`meshio.Mesh` version of this surface.
+
+        :rtype: :obj:`meshio.Mesh`
+        :return: This mesh converted to a :obj:`meshio.Mesh` instance.
+        """
+        import numpy as np
+        import meshio
+        from collections import defaultdict
+
+        points = self.get_vertices()
+        faces = self.get_faces()
+        face_normals = self.get_face_normals()
+
+        # Convert face list to list-of-tuples (group faces of same degree/number-of-vertices).
+        cell_type_dict = defaultdict(lambda: "polygon")
+        cell_type_dict.update({3: "triangle", 4: "quad"})
+        cell_dict = defaultdict(list)
+        cell_nrmls_dict = defaultdict(list)
+        for face_idx in range(len(faces)):
+            face = faces[face_idx]
+            cell_dict[len(face)].append(face)
+            cell_nrmls_dict[len(face)].append(face_normals[face_idx])
+        cells = \
+            list(
+                (cell_type_dict[num_verts], np.asarray(cell_dict[num_verts]))
+                for num_verts in sorted(list(cell_dict.keys()))
+            )
+        del cell_dict
+
+        point_data = {"Normals": self.get_vertex_normals()}
+        cell_data = {
+            "Normals": list(
+                cell_nrmls_dict[num_verts] for num_verts in sorted(list(cell_nrmls_dict.keys()))
+            )
+        }
+
+        return meshio.Mesh(points, cells, point_data=point_data, cell_data=cell_data)
+
+    @classmethod
+    def from_meshio_mesh(cls, meshio_mesh):
+        """
+        Return a :obj:`PolyhedralSurface` version of the :samp:`{meshio_mesh}` mesh.
+
+        :type meshio_mesh: :obj:`meshio.Mesh`
+        :param meshio_mesh: Convert this mesh to a :obj:`PolyhedralSurface`.
+        :rtype: :obj:`PolyhedralSurface`
+        :return: The :samp:`{meshio_mesh}` mesh converted to a :obj:`PolyhedralSurface` instance.
+        """
+        import numpy as np
+
+        faces = sum(list(np.asanyarray(cells.data).tolist() for cells in meshio_mesh.cells), list())
+        ps = PolyhedralSurface(vertices=meshio_mesh.points, faces=faces)
+        if "Normals" in meshio_mesh.point_data:
+            ps.set_vertex_normals(meshio_mesh.point_data["Normals"])
+
+        return ps
 
 
 class MongeJetFitter(_MongeJetFitter):
