@@ -251,6 +251,11 @@ public:
     return this->monge_form_to_array(*mf_result);
   }
 
+  py::object get_poly_surface()
+  {
+    return this->poly_surface_obj_;
+  }
+
 protected:
   MongeFitter monge_fitter_;
   py::object poly_surface_obj_;
@@ -355,6 +360,11 @@ void export_monge_jet_fitter(pybind11::module_ m)
         ":type degree_monge: :obj:`int`\n"
         ":param degree_monge: The degree (highest exponent) of the Monge polynomial."
         " :samp:`1 <= {degree_monge} <= {degree_poly_fit} <= 4`.\n"
+    )
+    .def_property_readonly(
+        "poly_surface",
+        &MongeJetFitterPy::get_poly_surface,
+        "Polynomial patch vertex fitting performed on this :obj:`PolyhedralSurface` .\n"
     )
     .def_property_readonly(
         "degree_poly_fit",

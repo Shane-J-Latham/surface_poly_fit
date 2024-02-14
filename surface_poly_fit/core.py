@@ -129,7 +129,63 @@ class MongeJetFitter(_MongeJetFitter):
     """
     Fits Monge polynomial to :obj:`PolyhedralSurface` patch vertices.
     """
-    pass
+
+    def convert_result_to_point_data(self, result_array):
+        """
+        Convert the :samp:`{result_array}` record array to a *point-data* :obj:`dict`
+        suitable for :attr:`meshio.Mesh.point_data`.
+
+        :type result_array: :obj:`numpy.ndarray`
+        :param result_array: Polynomial fitting result array, e.g. as returned by :meth:`fit_all`.
+        :rtype: :obj:`dict`
+        :return: A dictionary of :samp:`(str, numpy.ndarray)` entries.
+        """
+        point_data_dict = dict()
+        point_data_dict["vertex_index"] = result_array["vertex_index"]
+        point_data_dict["num_fitting_points"] = result_array["num_fitting_points"]
+        point_data_dict["pf_condition_number"] = result_array["poly_fit_condition_number"]
+
+        ra_pfrs = result_array["poly_fit_residual_stats"]
+        point_data_dict["pfrs_min_abs"] = ra_pfrs["min_abs"]
+        point_data_dict["pfrs_max_abs"] = ra_pfrs["max_abs"]
+        point_data_dict["pfrs_mean_abs"] = ra_pfrs["mean_abs"]
+        point_data_dict["pfrs_median_abs"] = ra_pfrs["median_abs"]
+        point_data_dict["pfrs_stdd"] = ra_pfrs["stdd"]
+
+        point_data_dict["direction"] = result_array["direction"]
+        point_data_dict["k0"] = result_array["k"][:, 0]
+        point_data_dict["k1"] = result_array["k"][:, 1]
+
+        ra_pfba = result_array["poly_fit_bounding_area"]
+        point_data_dict["ba_rect_minor"] = ra_pfba["rectangle_min_side_length"]
+        point_data_dict["ba_rect_major"] = ra_pfba["rectangle_max_side_length"]
+        point_data_dict["ba_ellip_minor"] = ra_pfba["ellipse_min_radius"]
+        point_data_dict["ba_ellip_major"] = ra_pfba["ellipse_max_radius"]
+        point_data_dict["ba_circle"] = ra_pfba["circle_radius"]
+
+        return point_data_dict
+
+    def to_meshio_mesh(self, result_array):
+        """
+        Return a :obj:`meshio.Mesh` version of the surface with *point-data*
+        assigned from the :samp:`{result_array}`.
+
+        :rtype: :obj:`meshio.Mesh`
+        :return: A :obj:`meshio.Mesh` instance with point-data assigned
+           from the :samp:`{result_array}`.
+        """
+        if len(result_array) != self.poly_surface.num_vertices:
+            raise ValueError(
+                f"Got len(result_array)={len(result_array)}"
+                +
+                ", expected len(result_array)=self.poly_surface.num_vertices="
+                +
+                f"{self.poly_surface.num_vertices}"
+            )
+        mio_mesh = self.poly_surface.to_meshio_mesh()
+        mio_mesh.point_data.update(self.convert_result_to_point_data(result_array))
+
+        return mio_mesh
 
 
 MongeJetFitter.__doc__ += _fitting_basis_type_doc_string()

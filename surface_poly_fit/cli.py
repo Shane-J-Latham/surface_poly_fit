@@ -49,6 +49,7 @@ def write_result_array(output_file_name, result_ary, polyhedral_surface=None):
     """
     from pathlib import Path
     import numpy as np
+    from . import __version__ as spf_version
 
     output_file_path = Path(output_file_name)
     if not output_file_path.parent.exists():
@@ -64,6 +65,7 @@ def write_result_array(output_file_name, result_ary, polyhedral_surface=None):
 
     np.savez_compressed(
         output_file_path,
+        version={"surface_poly_fit": spf_version},
         surface_poly_fit_results=result_ary,
         vertices=vertices,
         faces=faces,

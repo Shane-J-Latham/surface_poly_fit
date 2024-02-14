@@ -667,6 +667,47 @@ class MongeJetFitterTest(SurfacePolyFitTest):
                     )
                 )
 
+    def test_to_meshio_mesh(self):
+        """
+        Test :meth:`surface_poly_fit.core.MongeJetFitter.to_meshio_mesh`.
+        """
+        from trimesh.primitives import Capsule
+        from surface_poly_fit.core import PolyhedralSurface, MongeJetFitter
+
+        trimesh_mesh = Capsule()
+        poly_surface = PolyhedralSurface(vertices=trimesh_mesh.vertices, faces=trimesh_mesh.faces)
+
+        degree_monge = 2
+        degree_poly_fit = 2
+        fitter = MongeJetFitter(poly_surface, degree_poly_fit, degree_monge)
+        result_array = fitter.fit_all(num_rings=8)
+
+        mio_mesh = fitter.to_meshio_mesh(result_array)
+        self.assertSequenceEqual(
+            fitter.poly_surface.get_vertices().tolist(),
+            mio_mesh.points.tolist()
+        )
+        self.assertSequenceEqual(
+            result_array["vertex_index"].tolist(),
+            mio_mesh.point_data["vertex_index"].tolist()
+        )
+        self.assertSequenceEqual(
+            result_array["num_fitting_points"].tolist(),
+            mio_mesh.point_data["num_fitting_points"].tolist()
+        )
+        self.assertSequenceEqual(
+            result_array["k"][:, 0].tolist(),
+            mio_mesh.point_data["k0"].tolist()
+        )
+        self.assertSequenceEqual(
+            result_array["k"][:, 1].tolist(),
+            mio_mesh.point_data["k1"].tolist()
+        )
+        self.assertSequenceEqual(
+            result_array["direction"].tolist(),
+            mio_mesh.point_data["direction"].tolist()
+        )
+
 
 __all__ = [s for s in dir() if not s.startswith('_')]
 
