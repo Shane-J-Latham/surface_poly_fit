@@ -1,5 +1,9 @@
 """
 Tests for :mod:`surface_poly_fit`.
+
+.. autosummary::
+   :toctree: generated/
+
 """
 import numpy as _np
 import unittest as _unittest
@@ -704,8 +708,16 @@ class MongeJetFitterTest(SurfacePolyFitTest):
             mio_mesh.point_data["k1"].tolist()
         )
         self.assertSequenceEqual(
-            result_array["direction"].tolist(),
-            mio_mesh.point_data["direction"].tolist()
+            result_array["direction"][:, :, 0].tolist(),
+            mio_mesh.point_data["k0_dir"].tolist()
+        )
+        self.assertSequenceEqual(
+            result_array["direction"][:, :, 1].tolist(),
+            mio_mesh.point_data["k1_dir"].tolist()
+        )
+        self.assertSequenceEqual(
+            result_array["direction"][:, :, 2].tolist(),
+            mio_mesh.point_data["k_normal"].tolist()
         )
 
 

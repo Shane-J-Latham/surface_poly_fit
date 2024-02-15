@@ -43,6 +43,10 @@ result_array = fitter.fit_all(num_rings=4)
 
 # Principle curvatures for all vertices of the surface-mesh:
 result_array["k"]
+
+# Write polyhedral-surface and polynomial-fitting-results as point-data in VTK .vtu file
+meshio.write("my_mesh_surface_poly_fit_results.vtu", fitter.to_meshio_mesh(result_array))
+
 ```
 
 ### Command Line
@@ -61,12 +65,26 @@ $ surface_poly_fit                           \
 
 The output file ``my_mesh_surf_poly_fit.npz`` is a [numpy](https://numpy.org)
 [.npz](https://numpy.org/doc/stable/reference/generated/numpy.savez_compressed.html)
-file containing entries: ``"surface_poly_fit_result"``, ``"vertices"``, ``"faces"`` and ``"vertex_normals"``. 
+file containing entries: ``"surface_poly_fit_result"``, ``"vertices"``, ``"faces"``
+and ``"vertex_normals"``. 
+
+The output ``my_mesh_surf_poly_fit.npz`` file can be converted to a [VTK](https://vtk.org)
+unstructured grid (``.vtu``) file (e.g. for visualization using [Paraview](https://paraview.org))
+using:
+
+```console
+$ surface_poly_fit_r2m my_mesh_surf_poly_fit.npz
+```
+
+which will write a series of files (one file per ``--num_rings`` option):
+``my_mesh_surf_poly_fit_nr002.vtu``, ``my_mesh_surf_poly_fit_nr004.vtu``,
+``my_mesh_surf_poly_fit_nr008.vtu`` and ``my_mesh_surf_poly_fit_nr016.vtu``.
+
 
 ### Parallelism
 
-[OpenMP](https://www.openmp.org/) threads are used for coarse parallelism
-(each thread runs a *chunk* of vertex fitting). The number of threads is
+Polynomial fitting (``surface_poly_fit``) uses [OpenMP](https://www.openmp.org/) threads for
+coarse parallelism (each thread runs a *chunk* of vertex fitting). The number of threads is
 controlled with the `OMP_NUM_THREADS` environment variable, a *maximum* number
 of threads (depends on execution environment) is used by default.
 

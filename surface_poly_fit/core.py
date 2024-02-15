@@ -130,6 +130,42 @@ class MongeJetFitter(_MongeJetFitter):
     Fits Monge polynomial to :obj:`PolyhedralSurface` patch vertices.
     """
 
+    def get_field_data(self, result_array):
+        """
+        Returns a :obj:`dict` which can be used as :attr:`meshio.Mesh.field_data`.
+
+        :type result_array: :obj:`numpy.ndarray`
+        :param result_array: Polynomial fitting result array, e.g. as returned by :meth:`fit_all`.
+        :rtype: :obj:`dict`
+        :return: A dictionary of :samp:`(str, obj)` *field-data* entries.
+        """
+        import numpy as np
+
+        degree_monge = np.unique(result_array["degree_monge"])
+        if len(degree_monge) == 1:
+            degree_monge = degree_monge[0]
+        else:
+            degree_monge = str(tuple(degree_monge))
+
+        degree_poly_fit = np.unique(result_array["degree_poly_fit"])
+        if len(degree_poly_fit) == 1:
+            degree_poly_fit = degree_poly_fit[0]
+        else:
+            degree_poly_fit = str(tuple(degree_poly_fit))
+
+        num_rings = np.unique(result_array["num_rings"])
+        if len(num_rings) == 1:
+            num_rings = num_rings[0]
+        else:
+            num_rings = str(tuple(num_rings))
+
+        return \
+            {
+                "degree_monge": degree_monge,
+                "degree_poly_fit": degree_poly_fit,
+                "num_rings": num_rings,
+            }
+
     def convert_result_to_point_data(self, result_array):
         """
         Convert the :samp:`{result_array}` record array to a *point-data* :obj:`dict`
@@ -152,7 +188,9 @@ class MongeJetFitter(_MongeJetFitter):
         point_data_dict["pfrs_median_abs"] = ra_pfrs["median_abs"]
         point_data_dict["pfrs_stdd"] = ra_pfrs["stdd"]
 
-        point_data_dict["direction"] = result_array["direction"]
+        point_data_dict["k0_dir"] = result_array["direction"][:, :, 0]
+        point_data_dict["k1_dir"] = result_array["direction"][:, :, 1]
+        point_data_dict["k_normal"] = result_array["direction"][:, :, 2]
         point_data_dict["k0"] = result_array["k"][:, 0]
         point_data_dict["k1"] = result_array["k"][:, 1]
 
@@ -184,6 +222,7 @@ class MongeJetFitter(_MongeJetFitter):
             )
         mio_mesh = self.poly_surface.to_meshio_mesh()
         mio_mesh.point_data.update(self.convert_result_to_point_data(result_array))
+        mio_mesh.field_data.update(self.get_field_data(result_array))
 
         return mio_mesh
 

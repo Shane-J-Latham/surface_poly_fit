@@ -6,4 +6,5 @@
    :maxdepth: 1
 
    surface_poly_fit_cli
+   surface_poly_fit_results_to_mesh
 

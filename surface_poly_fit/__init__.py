@@ -7,6 +7,7 @@ Fit polynomial surface to mesh vertices.
 
    cli - Command line interface.
    core - Polynomial fitting classes and functions.
+   results_to_mesh - Command line interface for converting :samp:`".npz"` to :samp:`".vtu"`.
    tests - :mod:`surface_poly_fit` unit-tests.
 
 """

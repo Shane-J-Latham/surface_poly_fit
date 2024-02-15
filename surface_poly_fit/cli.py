@@ -1,7 +1,10 @@
 """
 Command line interface for surface polynomial fitting.
+
+.. autosummary::
+   :toctree: generated/
+
 """
-from surface_poly_fit._spf_cgal import MongeJetFitter
 
 
 def read_polyhedral_surface(file_name):
@@ -96,7 +99,7 @@ def surface_poly_fit_cli(args):
         output_file_name += "_surface_poly_fit" + os.path.extsep + "npz"
     num_rings_list = eval(args.num_rings)
     # Convert the argument string to enum type.
-    args.poly_fit_basis_type = MongeJetFitter.FittingBasisType.__members__[args.poly_fit_basis_type]
+    args.poly_fit_basis_type = Fitter.FittingBasisType.__members__[args.poly_fit_basis_type]
     logger.info("Reading mesh from file %s...", args.mesh_file)
     polyhedral_surface = read_polyhedral_surface(args.mesh_file)
     logger.info(

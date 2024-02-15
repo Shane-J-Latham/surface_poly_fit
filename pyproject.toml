@@ -22,6 +22,7 @@ dynamic = ["version"]
 
 [project.scripts]
 surface_poly_fit = "surface_poly_fit.cli:surface_poly_fit_main_cli"
+surface_poly_fit_r2m = "surface_poly_fit.results_to_mesh:results_to_mesh_main_cli"
 
 [tool.versioneer]
 VCS = "git"
