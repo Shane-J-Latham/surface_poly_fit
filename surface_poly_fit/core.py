@@ -6,6 +6,7 @@ Polynomial fitting classes and functions.
    :toctree: generated/
 
 """
+import numpy as _np
 from ._spf_cgal import PolyhedralSurface as _PolyhedralSurface   # noqa: F401
 from ._spf_cgal import MongeJetFitter as _MongeJetFitter
 
@@ -65,20 +66,21 @@ class PolyhedralSurface(_PolyhedralSurface):
                 child_class=self.__class__
             )
 
-    def to_meshio_mesh(self):
+    def to_meshio_mesh(self, float_dtype=_np.float64):
         """
         Return a :obj:`meshio.Mesh` version of this surface.
 
+        :type float_dtype: :obj:`numpy.dtype`
+        :param float_dtype: The floating point type for vertices and normals of the returned mesh.
         :rtype: :obj:`meshio.Mesh`
         :return: This mesh converted to a :obj:`meshio.Mesh` instance.
         """
-        import numpy as np
         import meshio
         from collections import defaultdict
 
-        points = self.get_vertices()
+        points = self.get_vertices().astype(float_dtype)
         faces = self.get_faces()
-        face_normals = self.get_face_normals()
+        face_normals = self.get_face_normals().astype(float_dtype)
 
         # Convert face list to list-of-tuples (group faces of same degree/number-of-vertices).
         cell_type_dict = defaultdict(lambda: "polygon")
@@ -91,12 +93,12 @@ class PolyhedralSurface(_PolyhedralSurface):
             cell_nrmls_dict[len(face)].append(face_normals[face_idx])
         cells = \
             list(
-                (cell_type_dict[num_verts], np.asarray(cell_dict[num_verts]))
+                (cell_type_dict[num_verts], _np.asarray(cell_dict[num_verts]))
                 for num_verts in sorted(list(cell_dict.keys()))
             )
         del cell_dict
 
-        point_data = {"Normals": self.get_vertex_normals()}
+        point_data = {"Normals": self.get_vertex_normals().astype(float_dtype)}
         cell_data = {
             "Normals": list(
                 cell_nrmls_dict[num_verts] for num_verts in sorted(list(cell_nrmls_dict.keys()))
@@ -115,9 +117,11 @@ class PolyhedralSurface(_PolyhedralSurface):
         :rtype: :obj:`PolyhedralSurface`
         :return: The :samp:`{meshio_mesh}` mesh converted to a :obj:`PolyhedralSurface` instance.
         """
-        import numpy as np
-
-        faces = sum(list(np.asanyarray(cells.data).tolist() for cells in meshio_mesh.cells), list())
+        faces = \
+            sum(
+                list(_np.asanyarray(cells.data).tolist() for cells in meshio_mesh.cells),
+                list()
+            )
         ps = PolyhedralSurface(vertices=meshio_mesh.points, faces=faces)
         if "Normals" in meshio_mesh.point_data:
             ps.set_vertex_normals(meshio_mesh.point_data["Normals"])
@@ -139,21 +143,19 @@ class MongeJetFitter(_MongeJetFitter):
         :rtype: :obj:`dict`
         :return: A dictionary of :samp:`(str, obj)` *field-data* entries.
         """
-        import numpy as np
-
-        degree_monge = np.unique(result_array["degree_monge"])
+        degree_monge = _np.unique(result_array["degree_monge"])
         if len(degree_monge) == 1:
             degree_monge = degree_monge[0]
         else:
             degree_monge = str(tuple(degree_monge))
 
-        degree_poly_fit = np.unique(result_array["degree_poly_fit"])
+        degree_poly_fit = _np.unique(result_array["degree_poly_fit"])
         if len(degree_poly_fit) == 1:
             degree_poly_fit = degree_poly_fit[0]
         else:
             degree_poly_fit = str(tuple(degree_poly_fit))
 
-        num_rings = np.unique(result_array["num_rings"])
+        num_rings = _np.unique(result_array["num_rings"])
         if len(num_rings) == 1:
             num_rings = num_rings[0]
         else:
@@ -166,48 +168,94 @@ class MongeJetFitter(_MongeJetFitter):
                 "num_rings": num_rings,
             }
 
-    def convert_result_to_point_data(self, result_array):
+    def convert_result_to_point_data(self, result_array, float_dtype=_np.float64):
         """
         Convert the :samp:`{result_array}` record array to a *point-data* :obj:`dict`
         suitable for :attr:`meshio.Mesh.point_data`.
 
+        :type float_dtype: :obj:`numpy.dtype`
+        :param float_dtype: The floating point type used for float fields in the returned
+           point-data :obj:`dict`.
         :type result_array: :obj:`numpy.ndarray`
         :param result_array: Polynomial fitting result array, e.g. as returned by :meth:`fit_all`.
         :rtype: :obj:`dict`
         :return: A dictionary of :samp:`(str, numpy.ndarray)` entries.
         """
+        import numpy as np
+
         point_data_dict = dict()
-        point_data_dict["vertex_index"] = result_array["vertex_index"]
-        point_data_dict["num_fitting_points"] = result_array["num_fitting_points"]
-        point_data_dict["pf_condition_number"] = result_array["poly_fit_condition_number"]
+
+        max_vertex_index = _np.max(result_array["vertex_index"])
+        vi_dtype = _np.uint64
+        if max_vertex_index < np.iinfo(_np.uint8).max:
+            vi_dtype = _np.uint8
+        elif max_vertex_index < np.iinfo(_np.uint16).max:
+            vi_dtype = _np.uint16
+        elif max_vertex_index < np.iinfo(_np.uint32).max:
+            vi_dtype = _np.uint32
+
+        point_data_dict["vertex_index"] = result_array["vertex_index"].astype(vi_dtype)
+
+        max_num_fit_coordinates = _np.max(result_array["num_fitting_points"])
+        nfp_dtype = _np.uint32
+        if max_num_fit_coordinates < np.iinfo(_np.uint8).max:
+            nfp_dtype = _np.uint8
+        if max_num_fit_coordinates < np.iinfo(_np.uint16).max:
+            nfp_dtype = _np.uint16
+        point_data_dict["num_fitting_points"] = result_array["num_fitting_points"].astype(nfp_dtype)
+
+        point_data_dict["pf_condition_number"] = \
+            result_array["poly_fit_condition_number"].astype(float_dtype)
 
         ra_pfrs = result_array["poly_fit_residual_stats"]
-        point_data_dict["pfrs_min_abs"] = ra_pfrs["min_abs"]
-        point_data_dict["pfrs_max_abs"] = ra_pfrs["max_abs"]
-        point_data_dict["pfrs_mean_abs"] = ra_pfrs["mean_abs"]
-        point_data_dict["pfrs_median_abs"] = ra_pfrs["median_abs"]
-        point_data_dict["pfrs_stdd"] = ra_pfrs["stdd"]
+        point_data_dict["pfrs_min_abs"] = ra_pfrs["min_abs"].astype(float_dtype)
+        point_data_dict["pfrs_max_abs"] = ra_pfrs["max_abs"].astype(float_dtype)
+        point_data_dict["pfrs_mean_abs"] = ra_pfrs["mean_abs"].astype(float_dtype)
+        point_data_dict["pfrs_median_abs"] = ra_pfrs["median_abs"].astype(float_dtype)
+        point_data_dict["pfrs_stdd"] = ra_pfrs["stdd"].astype(float_dtype)
 
-        point_data_dict["k0_dir"] = result_array["direction"][:, :, 0]
-        point_data_dict["k1_dir"] = result_array["direction"][:, :, 1]
-        point_data_dict["k_normal"] = result_array["direction"][:, :, 2]
-        point_data_dict["k0"] = result_array["k"][:, 0]
-        point_data_dict["k1"] = result_array["k"][:, 1]
+        point_data_dict["k0_dir"] = result_array["direction"][:, :, 0].astype(float_dtype)
+        point_data_dict["k1_dir"] = result_array["direction"][:, :, 1].astype(float_dtype)
+        point_data_dict["k_normal"] = result_array["direction"][:, :, 2].astype(float_dtype)
+        point_data_dict["k0"] = result_array["k"][:, 0].astype(float_dtype)
+        point_data_dict["k1"] = result_array["k"][:, 1].astype(float_dtype)
+
+        k_abs = np.absolute(result_array["k"]).astype(float_dtype)
+        k_abs_min_idx = tuple(np.argmin(k_abs, axis=1))
+        k_abs_max_idx = tuple(np.argmax(k_abs, axis=1))
+        k_idx = tuple(np.arange(k_abs.shape[0]))
+        point_data_dict["k_abs_min"] = k_abs[k_idx, k_abs_min_idx].astype(float_dtype)
+        point_data_dict["k_abs_max"] = k_abs[k_idx, k_abs_max_idx].astype(float_dtype)
+        point_data_dict["k_abs_min_dir"] = \
+            np.asarray(
+                list(
+                    result_array["direction"][k_idx, i, k_abs_min_idx] for i in (0, 1, 2)
+                )
+            ).T.astype(float_dtype)
+        point_data_dict["k_abs_max_dir"] = \
+            np.asarray(
+                list(
+                    result_array["direction"][k_idx, i, k_abs_max_idx] for i in (0, 1, 2)
+                )
+            ).T.astype(float_dtype)
 
         ra_pfba = result_array["poly_fit_bounding_area"]
-        point_data_dict["ba_rect_minor"] = ra_pfba["rectangle_min_side_length"]
-        point_data_dict["ba_rect_major"] = ra_pfba["rectangle_max_side_length"]
-        point_data_dict["ba_ellip_minor"] = ra_pfba["ellipse_min_radius"]
-        point_data_dict["ba_ellip_major"] = ra_pfba["ellipse_max_radius"]
-        point_data_dict["ba_circle"] = ra_pfba["circle_radius"]
+        point_data_dict["ba_rect_minor"] = ra_pfba["rectangle_min_side_length"].astype(float_dtype)
+        point_data_dict["ba_rect_major"] = ra_pfba["rectangle_max_side_length"].astype(float_dtype)
+        point_data_dict["ba_ellip_minor"] = ra_pfba["ellipse_min_radius"].astype(float_dtype)
+        point_data_dict["ba_ellip_major"] = ra_pfba["ellipse_max_radius"].astype(float_dtype)
+        point_data_dict["ba_circle"] = ra_pfba["circle_radius"].astype(float_dtype)
 
         return point_data_dict
 
-    def to_meshio_mesh(self, result_array):
+    def to_meshio_mesh(self, result_array, float_dtype=_np.float64):
         """
         Return a :obj:`meshio.Mesh` version of the surface with *point-data*
-        assigned from the :samp:`{result_array}`.
+        fields assigned from the :samp:`{result_array}`.
 
+        :type float_dtype: :obj:`numpy.dtype`
+        :param float_dtype: The floating point type used for vertices, normals and
+           float fields in the returned :obj:`meshio.Mesh`.
         :rtype: :obj:`meshio.Mesh`
         :return: A :obj:`meshio.Mesh` instance with point-data assigned
            from the :samp:`{result_array}`.
@@ -220,8 +268,10 @@ class MongeJetFitter(_MongeJetFitter):
                 +
                 f"{self.poly_surface.num_vertices}"
             )
-        mio_mesh = self.poly_surface.to_meshio_mesh()
-        mio_mesh.point_data.update(self.convert_result_to_point_data(result_array))
+        mio_mesh = self.poly_surface.to_meshio_mesh(float_dtype=float_dtype)
+        mio_mesh.point_data.update(
+            self.convert_result_to_point_data(result_array, float_dtype=float_dtype)
+        )
         mio_mesh.field_data.update(self.get_field_data(result_array))
 
         return mio_mesh

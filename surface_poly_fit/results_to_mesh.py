@@ -6,6 +6,7 @@ Command line interface for converting polynomial-fitting results :samp:`".npz"`
    :toctree: generated/
 
 """
+import numpy as _np
 
 
 def read_results(file_name):
@@ -30,7 +31,7 @@ def read_results(file_name):
     return (ps, results_array)
 
 
-def write_result_mesh(output_file_name, polyhedral_surface, result_array):
+def write_result_mesh(output_file_name, polyhedral_surface, result_array, float_dtype=_np.float64):
     """
     Writes mesh file with fit results point-data.
 
@@ -43,6 +44,9 @@ def write_result_mesh(output_file_name, polyhedral_surface, result_array):
     :param result_array: Polynomial fitting result
        array (e.g. as returned by :meth:`surface_poly_fit.core.MongeJetFitter.fit_all`).
        These results are written as *point-data* in the output mesh file (if supported).
+    :type float_dtype: :obj:`numpy.dtype`
+    :param float_dtype: The floating point type used for vertices, normals and
+       float fields in the :obj:`meshio.Mesh` written to file.
     """
     from pathlib import Path
     import meshio
@@ -53,7 +57,7 @@ def write_result_mesh(output_file_name, polyhedral_surface, result_array):
         output_file_path.parent.mkdir(parents=True, exists_ok=True)
 
     fitter = MongeJetFitter(polyhedral_surface)
-    mio_mesh = fitter.to_meshio_mesh(result_array)
+    mio_mesh = fitter.to_meshio_mesh(result_array, float_dtype=float_dtype)
     meshio.write(output_file_name, mio_mesh)
 
 
@@ -69,7 +73,6 @@ def results_to_mesh_cli(args):
     """
     import logging
     from pathlib import Path
-    import numpy as np
 
     logging_format = '%(asctime)s|%(process)-8s|%(name)-8s|%(levelname)-8s|%(message)s'
     logging.basicConfig(format=logging_format, level=getattr(logging, args.log_level))
@@ -86,14 +89,15 @@ def results_to_mesh_cli(args):
     logger.info("Loading result data from file %s...", args.surface_poly_fit_results_file)
     poly_surface, result_array = read_results(args.surface_poly_fit_results_file)
 
-    num_rings_list = sorted(np.unique(result_array["num_rings"]).tolist())
+    num_rings_list = sorted(_np.unique(result_array["num_rings"]).tolist())
     for num_rings in num_rings_list:
         nr_output_file_path = Path(str(output_file_path) % {"num_rings": num_rings})
         logger.info("Writing mesh and result data to file %s...", nr_output_file_path)
         write_result_mesh(
             nr_output_file_path,
             poly_surface,
-            result_array[result_array["num_rings"] == num_rings]
+            result_array[result_array["num_rings"] == num_rings],
+            float_dtype=_np.dtype(args.float_dtype)
         )
 
 
@@ -122,6 +126,13 @@ def get_argument_parser():
         default="INFO"
     )
     ap.add_argument(
+        "-f", "--float_dtype",
+        action='store',
+        help="Floating point type used for vertex coordinates, normals and float point-data.",
+        choices=("float32", "float64"),
+        default="float32"
+    )
+    ap.add_argument(
         "-o", "--output_file",
         action='store',
         help=(
@@ -131,7 +142,9 @@ def get_argument_parser():
             +
             " Default is to replace the extension and add suffixes to input '.npz' file name."
             +
-            " One mesh-file per 'num_rings', e.g. 'output_mesh_file_name_nr%(num_rings)%03ds.vtu'."
+            " One mesh-file per 'num_rings'"
+            +
+            ", e.g. 'output_mesh_file_name_nr%%(num_rings)%%03ds.vtu'."
         ),
         default=None
     )
