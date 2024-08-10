@@ -15,11 +15,25 @@ jobs:
       fail-fast: false
       matrix:
         # os: [ubuntu-latest, windows-latest, macos-latest]
-        os: [windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-13]
         python-version: ["3.10"]
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Free disk space
+        shell: bash
+        run: |
+          if [ "${RUNNER_OS}" == "Linux" ]; then
+            df -h
+            echo "Cleaning..."
+            [ -e "/usr/share/dotnet" ] && sudo rm -rf "/usr/share/dotnet"
+            [ -e "/opt/ghc" ] && sudo rm -rf "/opt/ghc"
+            [ -e "/usr/local/share/boost" ] && sudo rm -rf "/usr/local/share/boost"
+            [ -e "${AGENT_TOOLSDIRECTORY}" ] && sudo rm -rf "${AGENT_TOOLSDIRECTORY}"
+            echo "Cleaning...done."
+            df -h
+          fi
 
       - name:  Install OS tools
         shell: bash
@@ -37,7 +51,7 @@ jobs:
           # This specifies the location of vcpkg, where it is going to be restored from cache, or create from scratch.
           vcpkgDirectory: '${{ runner.workspace }}/vcpkg'
           # The Git commit id of vcpkg to be checked out. This is only needed because we are not using a submodule.
-          vcpkgGitCommitId: "c8696863d371ab7f46e213d8f5ca923c4aef2a00"
+          vcpkgGitCommitId: "f7423ee180c4b7f40d43402c2feb3859161ef625"
           # The vcpkg.json file, which will be part of cache key computation.
           vcpkgJsonGlob: '**/vcpkg.json'
         id: runvcpkg
@@ -66,10 +80,12 @@ jobs:
           CIBW_ARCHS: "auto64"
           # Skip musllinux builds
           CIBW_SKIP: "*-musllinux_*"
-          CIBW_BUILD: "cp38-* cp39-* cp310-* cp311-* cp312-*"
+          CIBW_BUILD: "cp39-* cp310-* cp311-* cp312-*"
           # Don't repair macOS wheels
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: ""
           CIBW_BEFORE_BUILD_WINDOWS: "python -m pip install cmake"
+          CIBW_MANYLINUX_X86_64_IMAGE: "manylinux_2_28"
+          CIBW_BEFORE_BUILD_LINUX: "if [[ -e /project/_skbuild ]]; then rm -rf /project/_skbuild; fi; df -h"
           CIBW_BEFORE_ALL_LINUX: "/usr/bin/yum install --assumeyes --verbose zip unzip tar"
           # Run the package tests using `pytest`
           CIBW_TEST_COMMAND: "python -m surface_poly_fit.tests -fv || echo 'Tests failed!'"
@@ -121,7 +137,7 @@ jobs:
           python -m pip install "setuptools>=42" "versioneer[toml]" "scikit-build" "cmake" "ninja"
 
       - name: Create python sdist
-        run: python setup.py sdist --formats=gztar,zip
+        run: python setup.py sdist --formats=zip
 
       - name: Upload python sdist
         uses: actions/upload-artifact@v4
@@ -144,6 +160,28 @@ jobs:
           merge-multiple: true
 
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: ./release_artifacts/*
+
+  publish:
+    name: Upload release to PyPI
+    needs: [build_sdist, build_wheels]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/surface_poly_fit
+    permissions:
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
+    steps:
+      - name: Download python sdist and wheels
+        uses: actions/download-artifact@v4
+        with:
+          pattern: cibw-*
+          path: ./release_artifacts/
+          merge-multiple: true
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: ./release_artifacts/
