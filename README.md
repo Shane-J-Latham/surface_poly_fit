@@ -1,4 +1,5 @@
 <!-- Badges-Start-->
+[![PyPI](https://img.shields.io/pypi/v/surface_poly_fit.svg)](https://pypi.python.org/pypi/surface_poly_fit/)
 [![ReadTheDocs](https://readthedocs.org/projects/surface-poly-fit/badge/?version=latest&style=plastic)](https://surface-poly-fit.readthedocs.io/en/latest)
 [![Python Test](https://github.com/Shane-J-Latham/surface_poly_fit/actions/workflows/python-test.yml/badge.svg)](https://github.com/Shane-J-Latham/surface_poly_fit/actions/workflows/python-test.yml)
 [![Python Test (vcpkg build)](https://github.com/Shane-J-Latham/surface_poly_fit/actions/workflows/python-test-vcpkg.yml/badge.svg)](https://github.com/Shane-J-Latham/surface_poly_fit/actions/workflows/python-test-vcpkg.yml)
@@ -66,7 +67,7 @@ $ surface_poly_fit                           \
 The output file ``my_mesh_surf_poly_fit.npz`` is a [numpy](https://numpy.org)
 [.npz](https://numpy.org/doc/stable/reference/generated/numpy.savez_compressed.html)
 file containing entries: ``"surface_poly_fit_result"``, ``"vertices"``, ``"faces"``
-and ``"vertex_normals"``. 
+and ``"vertex_normals"``.
 
 The output ``my_mesh_surf_poly_fit.npz`` file can be converted to a [VTK](https://vtk.org)
 unstructured grid (``.vtu``) file (e.g. for visualization using [Paraview](https://paraview.org))
