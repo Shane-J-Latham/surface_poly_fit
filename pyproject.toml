@@ -20,6 +20,29 @@ dependencies = [
 ]
 dynamic = ["version"]
 
+authors = [
+  { name="Shane-J-Latham" }
+]
+
+description = "Python package for fitting polynomials to mesh surface patches."
+readme = "README.md"
+keywords = [
+  "surface-mesh", "surface", "mesh", "polynomial", "surface-patch", "polynomial-fitting"
+]
+license = { file="LICENSE" }
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/Shane-J-Latham/surface_poly_fit"
+Documentation = "https://surface-poly-fit.readthedocs.io/en/latest/"
+Repository = "https://github.com/Shane-J-Latham/surface_poly_fit"
+Issues = "https://github.com/Shane-J-Latham/surface_poly_fit/issues"
+
 [project.scripts]
 surface_poly_fit = "surface_poly_fit.cli:surface_poly_fit_main_cli"
 surface_poly_fit_r2m = "surface_poly_fit.results_to_mesh:results_to_mesh_main_cli"
