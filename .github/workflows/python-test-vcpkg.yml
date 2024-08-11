@@ -25,7 +25,7 @@ jobs:
         shell: bash
         run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
-            brew install autoconf automake libtool
+            brew install autoconf automake aclocal libtool autoconf-archive
           elif [ "${RUNNER_OS}" == "Linux" ]; then
             sudo apt-get install autoconf automake autoconf-archive
           fi
