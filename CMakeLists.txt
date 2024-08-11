@@ -5,11 +5,6 @@ IF (NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Release)
 ENDIF()
 
-enable_language(CXX)
-if (NOT CXX_STANDARD)
-  set(CXX_STANDARD C++11)
-endif()
-
 if(DEFINED CMAKE_TOOLCHAIN_FILE) # Print toolchain information
   message(STATUS "Using toolchain: ${CMAKE_TOOLCHAIN_FILE}")
 elseif(DEFINED ENV{CMAKE_TOOLCHAIN_FILE})
@@ -42,6 +37,8 @@ else()
 endif()
 
 PROJECT(surface_poly_fit)
+
+enable_language(CXX)
 
 MESSAGE(STATUS "Finding OpenMP...")
 FIND_PACKAGE(OpenMP)
