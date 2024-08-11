@@ -5,6 +5,14 @@ IF (NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Release)
 ENDIF()
 
+enable_language(CXX)
+if (NOT CXX_STANDARD)
+  set(CXX_STANDARD C++11)
+endif()
+
+MESSAGE(STATUS "Finding Python...")
+FIND_PACKAGE(Python COMPONENTS Interpreter Development.Module REQUIRED)
+
 if(DEFINED CMAKE_TOOLCHAIN_FILE) # Print toolchain information
   message(STATUS "Using toolchain: ${CMAKE_TOOLCHAIN_FILE}")
 elseif(DEFINED ENV{CMAKE_TOOLCHAIN_FILE})
@@ -40,8 +48,6 @@ PROJECT(surface_poly_fit)
 
 MESSAGE(STATUS "Finding OpenMP...")
 FIND_PACKAGE(OpenMP)
-MESSAGE(STATUS "Finding Python...")
-FIND_PACKAGE(Python COMPONENTS Interpreter Development REQUIRED)
 MESSAGE(STATUS "Finding pybind11...")
 FIND_PACKAGE(pybind11 CONFIG REQUIRED)
 MESSAGE(STATUS "Finding PythonExtensions...")
