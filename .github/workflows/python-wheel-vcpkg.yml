@@ -16,7 +16,7 @@ jobs:
       matrix:
         # os: [ubuntu-latest, windows-latest, macos-latest]
         os: [ubuntu-latest, windows-latest, macos-13]
-        python-version: ["3.11"]
+        python-version: ["3.10"]
 
     steps:
       - uses: actions/checkout@v4
@@ -51,7 +51,7 @@ jobs:
           # This specifies the location of vcpkg, where it is going to be restored from cache, or create from scratch.
           vcpkgDirectory: '${{ runner.workspace }}/vcpkg'
           # The Git commit id of vcpkg to be checked out. This is only needed because we are not using a submodule.
-          vcpkgGitCommitId: "1de2026f28ead93ff1773e6e680387643e914ea1"
+          vcpkgGitCommitId: "943c5ef1c8f6b5e6ced092b242c8299caae2ff01"
           # The vcpkg.json file, which will be part of cache key computation.
           vcpkgJsonGlob: '**/vcpkg.json'
         id: runvcpkg
@@ -67,7 +67,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==2.16.2
+        run: python -m pip install cibuildwheel==2.20.0
 
       - name: Build wheels
         shell: bash
@@ -102,7 +102,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.11"]
+        python-version: ["3.10"]
     steps:
       - uses: actions/checkout@v4
 
@@ -115,7 +115,7 @@ jobs:
           # This specifies the location of vcpkg, where it is going to be restored from cache, or create from scratch.
           vcpkgDirectory: '${{ runner.workspace }}/vcpkg'
           # The Git commit id of vcpkg to be checked out. This is only needed because we are not using a submodule.
-          vcpkgGitCommitId: "1de2026f28ead93ff1773e6e680387643e914ea1"
+          vcpkgGitCommitId: "943c5ef1c8f6b5e6ced092b242c8299caae2ff01"
           # The vcpkg.json file, which will be part of cache key computation.
           vcpkgJsonGlob: '**/vcpkg.json'
         id: runvcpkg
